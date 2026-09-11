@@ -98,7 +98,7 @@ public abstract class AbstractContainerScreenMixin {
 	 * 直接丢到地上。按下时拦掉还不够，得让对应的那次松开也一起被吞掉。</p>
 	 */
 	@Unique
-	private boolean inventoryshortcuts$customButtonPressed;
+	private boolean inventorybutler$customButtonPressed;
 
 	// ------------------------------------------------------------------
 	// 鼠标
@@ -106,7 +106,7 @@ public abstract class AbstractContainerScreenMixin {
 
 	@Inject(method = "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z",
 			at = @At("HEAD"), cancellable = true)
-	private void inventoryshortcuts$onMouseClicked(MouseButtonEvent event, boolean doubleClick,
+	private void inventorybutler$onMouseClicked(MouseButtonEvent event, boolean doubleClick,
 			CallbackInfoReturnable<Boolean> cir) {
 		AbstractContainerMenu menu = this.menu;
 		if (menu == null) {
@@ -118,7 +118,7 @@ public abstract class AbstractContainerScreenMixin {
 		// 不重置的话，万一上一次点击的 mouseReleased 被别的 mod 吞掉了（没轮到我们），
 		// 这个标志就会一直挂着 true，之后某次普通松手会被莫名其妙地吞掉一次。
 		// 重置是无害的：同一次点击里 mouseClicked 一定先于 mouseReleased 执行。
-		inventoryshortcuts$customButtonPressed = false;
+		inventorybutler$customButtonPressed = false;
 
 		// 1) 鼠标中键：一键整理
 		//
@@ -139,8 +139,8 @@ public abstract class AbstractContainerScreenMixin {
 		//
 		// 顺序上放在槽位判定之前：垃圾桶在 GUI 里的空地上，先判按钮可以少走一遍
 		// 36 个槽位的循环。
-		if (event.button() == 0 && inventoryshortcuts$showButtons()) {
-			int[] pos = inventoryshortcuts$trashButtonPos();
+		if (event.button() == 0 && inventorybutler$showButtons()) {
+			int[] pos = inventorybutler$trashButtonPos();
 			if (ModConfig.trashEnabled
 					&& isOverButton(pos[0], pos[1], event.x(), event.y())) {
 				boolean carrying = !menu.getCarried().isEmpty();
@@ -150,7 +150,7 @@ public abstract class AbstractContainerScreenMixin {
 						: TrashPayload.ACTION_RECLAIM;
 				ClientPlayNetworking.send(new TrashPayload(menu.containerId, -1, action));
 				// 记一笔，等会儿的 mouseReleased 要一起吞掉
-				inventoryshortcuts$customButtonPressed = true;
+				inventorybutler$customButtonPressed = true;
 				cir.setReturnValue(true);
 				return;
 			}
@@ -204,9 +204,9 @@ public abstract class AbstractContainerScreenMixin {
 	 */
 	@Inject(method = "mouseReleased(Lnet/minecraft/client/input/MouseButtonEvent;)Z",
 			at = @At("HEAD"), cancellable = true)
-	private void inventoryshortcuts$onMouseReleased(MouseButtonEvent event, CallbackInfoReturnable<Boolean> cir) {
-		if (inventoryshortcuts$customButtonPressed || inventoryshortcuts$isOverAnyButton(event)) {
-			inventoryshortcuts$customButtonPressed = false;
+	private void inventorybutler$onMouseReleased(MouseButtonEvent event, CallbackInfoReturnable<Boolean> cir) {
+		if (inventorybutler$customButtonPressed || inventorybutler$isOverAnyButton(event)) {
+			inventorybutler$customButtonPressed = false;
 			cir.setReturnValue(true);
 		}
 	}
@@ -217,7 +217,7 @@ public abstract class AbstractContainerScreenMixin {
 
 	@Inject(method = "keyPressed(Lnet/minecraft/client/input/KeyEvent;)Z",
 			at = @At("HEAD"), cancellable = true)
-	private void inventoryshortcuts$onKeyPressed(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+	private void inventorybutler$onKeyPressed(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
 		AbstractContainerMenu menu = this.menu;
 		if (menu == null) {
 			return;
@@ -229,7 +229,7 @@ public abstract class AbstractContainerScreenMixin {
 		//   keyPressed -> options.keyDrop.matches -> slotClicked(slot, index, ctrl?1:0, THROW)
 		// 服务端的 AbstractContainerMenuMixin 会在菜单入口把它拦下，
 		// 但那属于「事后补救」；在客户端先挡一道，玩家才能立刻看到提示。
-		if (matches(inventoryshortcuts$dropKey(), event)) {
+		if (matches(inventorybutler$dropKey(), event)) {
 			if (ModConfig.favoriteEnabled && ModConfig.favoriteProtectFromDrop
 					&& hoveredSlot != null && !hoveredSlot.getItem().isEmpty()
 					&& FavoriteStacks.isFavorite(hoveredSlot.getItem())) {
@@ -313,7 +313,7 @@ public abstract class AbstractContainerScreenMixin {
 	 *
 	 * <p>结论：mixin 里要用父类的字段，一律走静态访问器 / 自己算，别 {@code @Shadow}。</p>
 	 */
-	private static KeyMapping inventoryshortcuts$dropKey() {
+	private static KeyMapping inventorybutler$dropKey() {
 		Minecraft mc = Minecraft.getInstance();
 		return mc == null ? null : mc.options.keyDrop;
 	}
@@ -330,7 +330,7 @@ public abstract class AbstractContainerScreenMixin {
 	 */
 	@Inject(method = "extractSlot(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/world/inventory/Slot;II)V",
 			at = @At("TAIL"))
-	private void inventoryshortcuts$drawSlotDecorations(GuiGraphicsExtractor extractor, Slot slot,
+	private void inventorybutler$drawSlotDecorations(GuiGraphicsExtractor extractor, Slot slot,
 			int mouseX, int mouseY, CallbackInfo ci) {
 		ItemStack stack = slot.getItem();
 
@@ -360,9 +360,9 @@ public abstract class AbstractContainerScreenMixin {
 	 * 没有配方书的界面回退到 GUI 右缘外侧。</p>
 	 */
 	@Inject(method = "extractSlots(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V", at = @At("TAIL"))
-	private void inventoryshortcuts$drawButtons(GuiGraphicsExtractor extractor,
+	private void inventorybutler$drawButtons(GuiGraphicsExtractor extractor,
 			int mouseX, int mouseY, CallbackInfo ci) {
-		if (this.menu == null || !inventoryshortcuts$showButtons()) {
+		if (this.menu == null || !inventorybutler$showButtons()) {
 			return;
 		}
 
@@ -374,7 +374,7 @@ public abstract class AbstractContainerScreenMixin {
 		CursorIcons.reportPointerTarget(slotAt(mouseX, mouseY));
 
 		if (ModConfig.trashEnabled) {
-			int[] pos = inventoryshortcuts$trashButtonPos();
+			int[] pos = inventorybutler$trashButtonPos();
 			boolean hovered = isOverButton(pos[0], pos[1], mouseX, mouseY);
 			InventoryOverlay.drawTrashButton(extractor, pos[0], pos[1], hovered);
 			if (hovered) {
@@ -391,7 +391,7 @@ public abstract class AbstractContainerScreenMixin {
 	 * {@code ClientFeedback} 负责分流）。所有容器界面（包括创造模式）都画。</p>
 	 */
 	@Inject(method = "extractSlots(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V", at = @At("TAIL"))
-	private void inventoryshortcuts$drawScreenMessage(GuiGraphicsExtractor extractor,
+	private void inventorybutler$drawScreenMessage(GuiGraphicsExtractor extractor,
 			int mouseX, int mouseY, CallbackInfo ci) {
 		Component message = ScreenMessage.current();
 		if (message == null || client() == null) {
@@ -428,10 +428,10 @@ public abstract class AbstractContainerScreenMixin {
 	 *
 	 * <p>没有配方书的界面（箱子、漏斗这些）：回退到 GUI 右缘外侧、第一行槽位的高度。</p>
 	 */
-	private int[] inventoryshortcuts$trashButtonPos() {
+	private int[] inventorybutler$trashButtonPos() {
 		if (screen() instanceof AbstractRecipeBookScreen) {
 			ScreenPosition book = ((AbstractRecipeBookScreenAccessor) screen())
-					.inventoryshortcuts$recipeBookButtonPosition();
+					.inventorybutler$recipeBookButtonPosition();
 			return new int[]{
 					InventoryOverlay.bookSideButtonX(book.x() - this.leftPos),
 					InventoryOverlay.bookSideButtonY(book.y() - this.topPos),
@@ -447,7 +447,7 @@ public abstract class AbstractContainerScreenMixin {
 	 * （标签页 / 搜索框 / 滚动条），往里塞按钮很容易打架。所以那边不画 ——
 	 * 中键整理同样在创造模式里让给了原版。</p>
 	 */
-	private boolean inventoryshortcuts$showButtons() {
+	private boolean inventorybutler$showButtons() {
 		return !(screen() instanceof CreativeModeInventoryScreen);
 	}
 
@@ -457,11 +457,11 @@ public abstract class AbstractContainerScreenMixin {
 	}
 
 	/** 松手时用：这一次松开是不是落在垃圾桶按钮上的。 */
-	private boolean inventoryshortcuts$isOverAnyButton(MouseButtonEvent event) {
-		if (event.button() != 0 || !inventoryshortcuts$showButtons()) {
+	private boolean inventorybutler$isOverAnyButton(MouseButtonEvent event) {
+		if (event.button() != 0 || !inventorybutler$showButtons()) {
 			return false;
 		}
-		int[] pos = inventoryshortcuts$trashButtonPos();
+		int[] pos = inventorybutler$trashButtonPos();
 		return ModConfig.trashEnabled && isOverButton(pos[0], pos[1], event.x(), event.y());
 	}
 

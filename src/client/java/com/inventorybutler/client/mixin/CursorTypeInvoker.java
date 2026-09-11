@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface CursorTypeInvoker {
 
 	@Invoker("<init>")
-	static CursorType inventoryshortcuts$create(String name, long handle) {
+	static CursorType inventorybutler$create(String name, long handle) {
 		// Mixin 会把这个方法体整个替换成 new CursorType(name, handle)。
 		// 走到这行说明 mixin 没应用上（CursorIcons 里有反射兜底，会记一条日志）。
 		throw new AssertionError("CursorTypeInvoker 未生效");

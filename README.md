@@ -10,8 +10,7 @@
 
 > **名字的由来**：这四个功能合起来就是一位管家做的事 —— 帮你收拾房间（整理）、
 > 把不要的拿去倒掉（垃圾桶）、把贵重品锁进保险柜（收藏）、记住每件物品自己的位置（归位）。
-> mod id 仍是 `inventoryshortcuts`（改 id 会让老配置和按键绑定全部失效），
-> 展示名用 Inventory Butler。
+> mod id 为 `inventorybutler`，配置文件在 `config/inventorybutler.json`。
 
 ---
 
@@ -136,7 +135,7 @@
 ## 三、设计取舍（为什么这么做）
 
 **收藏标记挂在物品本身，而不是槽位上。**
-自定义数据组件（`inventoryshortcuts:favorite`），物品在背包、箱子间移动甚至掉落，
+自定义数据组件（`inventorybutler:favorite`），物品在背包、箱子间移动甚至掉落，
 标记都还在 —— 和泰拉瑞亚一致。代价：带标记的那叠**无法与普通同类物品合并**
 （数据组件不同 = 不是同一种物品栈），这正是「锁定」想要的效果。
 
@@ -168,7 +167,7 @@
 
 ## 四、配置
 
-首次启动生成 `config/inventoryshortcuts.json`（重启游戏生效）：
+首次启动生成 `config/inventorybutler.json`（重启游戏生效）：
 
 | 键 | 默认 | 说明 |
 | --- | --- | --- |
@@ -203,7 +202,7 @@
 foojay 解析器会自动下载。
 
 ```bash
-./gradlew build        # 产物在 build/libs/inventoryshortcuts-1.0.0.jar
+./gradlew build        # 产物在 build/libs/inventorybutler-1.0.0.jar
 ./gradlew runClient    # 开发环境启动游戏
 ```
 
@@ -234,7 +233,7 @@ Mixin 0.8.x 的 `@Shadow`「方法沿继承链找、字段不找」，而注解�
 ```
 src/main/java/com/inventorybutler/
 ├── InventoryShortcuts.java          入口：注册数据组件、网络包、服务端接收器
-├── ModComponents.java               inventoryshortcuts:favorite 数据组件
+├── ModComponents.java               inventorybutler:favorite 数据组件
 ├── FavoriteStacks.java              收藏状态读写
 ├── ModConfig.java                   JSON 配置（含废弃键自清理）
 ├── mixin/
@@ -336,7 +335,7 @@ Shift 快移**不经过**（走 `moveItemStackTo`），要挂在 `clicked` 的 T
 | --- | --- |
 | **1.21.11 及以下（有混淆）** | Loom 插件换回 `net.fabricmc.fabric-loom-remap` + Yarn mappings；`java.release` 降 21；GUI 输入事件签名按目标版本重对 |
 | **1.21.x** | `Identifier` 叫 `ResourceLocation`；「丢不掉」拦 `Player.drop(boolean)`（当时还在 `Player` 上） |
-| **1.20.5 及以下** | 无数据组件：收藏改写 NBT `{inventoryshortcuts:{Favorite:1b}}`；按钮底图换老 `blit` 贴图方式 |
+| **1.20.5 及以下** | 无数据组件：收藏改写 NBT `{inventorybutler:{Favorite:1b}}`；按钮底图换老 `blit` 贴图方式 |
 
 与版本强相关的只有三处：**数据组件（收藏存储）、GUI 事件签名、GUI 绘制 API**。
 业务逻辑（排序、归位规则、垃圾桶语义）版本无关。

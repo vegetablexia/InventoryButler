@@ -122,8 +122,8 @@ public final class PlacementHandler {
 		}
 
 		ServerPlayNetworking.send(player, new MessagePayload(nowPinned
-				? "inventoryshortcuts.message.pin.on"
-				: "inventoryshortcuts.message.pin.off"));
+				? "inventorybutler.message.pin.on"
+				: "inventorybutler.message.pin.off"));
 		InventoryShortcuts.LOGGER.debug("玩家 {} {} 背包第 {} 格的归位标记",
 				player.getGameProfile().name(), nowPinned ? "设置" : "取消", home);
 

@@ -17,5 +17,5 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(AbstractRecipeBookScreen.class)
 public interface AbstractRecipeBookScreenAccessor {
 	@Invoker("getRecipeBookButtonPosition")
-	ScreenPosition inventoryshortcuts$recipeBookButtonPosition();
+	ScreenPosition inventorybutler$recipeBookButtonPosition();
 }

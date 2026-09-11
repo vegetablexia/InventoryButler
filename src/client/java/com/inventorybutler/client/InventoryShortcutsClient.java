@@ -26,7 +26,7 @@ public class InventoryShortcutsClient implements ClientModInitializer {
 	 *
 	 * <p>26.x 的分类不再是「一个字符串」，而是一个 {@link Identifier}，
 	 * 翻译键由 {@code id.toLanguageKey("key.category")} 生成 ——
-	 * 也就是 {@code key.category.inventoryshortcuts.main}。</p>
+	 * 也就是 {@code key.category.inventorybutler.main}。</p>
 	 */
 	public static final KeyMapping.Category CATEGORY =
 			KeyMapping.Category.register(
@@ -47,21 +47,21 @@ public class InventoryShortcutsClient implements ClientModInitializer {
 		// KeyMapping 的构造函数第二个参数换成 InputConstants.Type.MOUSE 之后，
 		// 原版的「按键设置」界面里会正确显示成「鼠标 中键」，也能被鼠标事件匹配到。
 		sortKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.inventoryshortcuts.sort",
+				"key.inventorybutler.sort",
 				InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_MIDDLE, CATEGORY));
 		// 老玩家习惯的 R 键继续保留，作为整理的第二绑定。
 		sortAltKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.inventoryshortcuts.sort.alt",
+				"key.inventorybutler.sort.alt",
 				InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY));
 		trashKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.inventoryshortcuts.trash",
+				"key.inventorybutler.trash",
 				InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_DELETE, CATEGORY));
 		favoriteKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.inventoryshortcuts.favorite",
+				"key.inventorybutler.favorite",
 				InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, CATEGORY));
 		// 「归位标记」默认 T：原版物品栏界面没占用 T，不会和别的功能打架。
 		pinKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.inventoryshortcuts.pin",
+				"key.inventorybutler.pin",
 				InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_T, CATEGORY));
 
 		// 服务端是垃圾桶 / 归位标记的权威，客户端只是拿一份副本用于渲染。

@@ -40,8 +40,8 @@ public final class FavoriteHandler {
 		// 提示改走自定义包：动作栏文字在物品栏界面打开时看不见（HUD 不渲染），
 		// 客户端收到后会画在界面上方。收藏切换恰恰只发生在界面里。
 		ServerPlayNetworking.send(player, new MessagePayload(nowFavorite
-				? "inventoryshortcuts.message.favorite.on"
-				: "inventoryshortcuts.message.favorite.off"));
+				? "inventorybutler.message.favorite.on"
+				: "inventorybutler.message.favorite.off"));
 		InventoryShortcuts.LOGGER.debug("玩家 {} 把 {} {} 了",
 				player.getGameProfile().name(),
 				BuiltInRegistries.ITEM.getKey(stack.getItem()),

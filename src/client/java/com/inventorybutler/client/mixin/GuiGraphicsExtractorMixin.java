@@ -34,7 +34,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GuiGraphicsExtractorMixin {
 
 	@Inject(method = "applyCursor(Lcom/mojang/blaze3d/platform/Window;)V", at = @At("TAIL"))
-	private void inventoryshortcuts$overrideCursor(Window window, CallbackInfo ci) {
+	private void inventorybutler$overrideCursor(Window window, CallbackInfo ci) {
 		CursorType custom = CursorIcons.override();
 		if (custom != null) {
 			window.selectCursor(custom);

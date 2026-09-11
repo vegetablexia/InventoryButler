@@ -98,7 +98,7 @@ public final class TrashHandler {
 		if (ModConfig.favoriteProtectFromTrash && FavoriteStacks.isFavorite(stack)) {
 			// 提示走自定义包：这个提示只在物品栏界面里触发，动作栏文字看不见
 			ServerPlayNetworking.send(player,
-					new MessagePayload("inventoryshortcuts.message.favorite.protected"));
+					new MessagePayload("inventorybutler.message.favorite.protected"));
 			return true;
 		}
 		return false;

@@ -13,7 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * 极简 JSON 配置：无需 Cloth Config 之类的依赖，直接读写 config/inventoryshortcuts.json。
+ * 极简 JSON 配置：无需 Cloth Config 之类的依赖，直接读写 config/inventorybutler.json。
  * 改动后需要重启游戏生效（只有客户端会读取它）。
  */
 public final class ModConfig {

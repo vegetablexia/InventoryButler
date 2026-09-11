@@ -34,7 +34,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(LocalPlayer.class)
 public abstract class LocalPlayerDropMixin {
 	@Inject(method = "drop(Z)Z", at = @At("HEAD"), cancellable = true)
-	private void inventoryshortcuts$blockDroppingFavorite(boolean dropStack,
+	private void inventorybutler$blockDroppingFavorite(boolean dropStack,
 			CallbackInfoReturnable<Boolean> cir) {
 		if (!ModConfig.favoriteEnabled || !ModConfig.favoriteProtectFromDrop) {
 			return;

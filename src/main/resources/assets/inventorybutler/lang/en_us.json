@@ -1,0 +1,21 @@
+{
+	"key.category.inventorybutler.main": "Inventory Shortcuts",
+
+	"key.inventorybutler.sort": "Sort inventory",
+	"key.inventorybutler.sort.alt": "Sort inventory (secondary key)",
+	"key.inventorybutler.trash": "Move hovered stack to trash",
+	"key.inventorybutler.favorite": "Toggle favorite on hovered stack",
+	"key.inventorybutler.pin": "Pin / unpin this slot for an item",
+
+	"inventorybutler.tooltip.trash.empty": "Trash is empty",
+	"inventorybutler.tooltip.trash.reclaim": "Click to take back",
+
+	"inventorybutler.message.favorite.on": "Favorited",
+	"inventorybutler.message.favorite.off": "Unfavorited",
+	"inventorybutler.message.favorite.protected": "This item is favorited",
+	"inventorybutler.message.favorite.cannotDrop": "This item is favorited",
+	"inventorybutler.message.favorite.cannotMove": "This item is favorited",
+
+	"inventorybutler.message.pin.on": "Slot pinned",
+	"inventorybutler.message.pin.off": "Slot unpinned"
+}

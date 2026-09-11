@@ -31,7 +31,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Inventory.class)
 public abstract class InventoryAddMixin {
 	@Inject(method = "add(Lnet/minecraft/world/item/ItemStack;)Z", at = @At("TAIL"))
-	private void inventoryshortcuts$reflowPinnedAfterAdd(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
+	private void inventorybutler$reflowPinnedAfterAdd(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
 		Player owner = ((Inventory) (Object) this).player;
 		// 只在服务端做：客户端那份背包只是镜像，改了会被服务端覆盖回去
 		if (owner instanceof ServerPlayer serverPlayer) {

@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * 客户端只负责「好看」和「好按」：绘制星标、垃圾桶按钮，以及把按键/鼠标操作翻译成网络包。</p>
  */
 public class InventoryShortcuts implements ModInitializer {
-	public static final String MOD_ID = "inventoryshortcuts";
+	public static final String MOD_ID = "inventorybutler";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	public static Identifier id(String path) {

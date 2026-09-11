@@ -210,8 +210,8 @@ public final class InventoryOverlay {
 	/** 鼠标停在垃圾桶按钮上时给出原版风格的 tooltip。 */
 	public static void addTrashTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
 		Component text = ClientTrashState.isEmpty()
-				? Component.translatable("inventoryshortcuts.tooltip.trash.empty")
-				: Component.translatable("inventoryshortcuts.tooltip.trash.reclaim");
+				? Component.translatable("inventorybutler.tooltip.trash.empty")
+				: Component.translatable("inventorybutler.tooltip.trash.reclaim");
 		g.setTooltipForNextFrame(Minecraft.getInstance().font, text, mouseX, mouseY);
 	}
 }

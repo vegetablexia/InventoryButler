@@ -209,7 +209,7 @@ public final class CursorIcons {
 				return null;
 			}
 
-			CursorType type = wrap(star ? "inventoryshortcuts_star" : "inventoryshortcuts_trash", handle);
+			CursorType type = wrap(star ? "inventorybutler_star" : "inventorybutler_trash", handle);
 			if (type == null) {
 				GLFW.glfwDestroyCursor(handle);
 				unavailable = true;
@@ -237,7 +237,7 @@ public final class CursorIcons {
 	 */
 	private static CursorType wrap(String name, long handle) {
 		try {
-			return CursorTypeInvoker.inventoryshortcuts$create(name, handle);
+			return CursorTypeInvoker.inventorybutler$create(name, handle);
 		} catch (Throwable primary) {
 			try {
 				Constructor<CursorType> ctor = CursorType.class.getDeclaredConstructor(String.class, long.class);

@@ -52,7 +52,7 @@ public abstract class AbstractContainerMenuMixin {
 
 	@Inject(method = "clicked(IILnet/minecraft/world/inventory/ContainerInput;Lnet/minecraft/world/entity/player/Player;)V",
 			at = @At("HEAD"), cancellable = true)
-	private void inventoryshortcuts$protectFavorites(int slotId, int button, ContainerInput input,
+	private void inventorybutler$protectFavorites(int slotId, int button, ContainerInput input,
 			Player player, CallbackInfo ci) {
 		if (!ModConfig.favoriteEnabled || !ModConfig.favoriteProtectFromDrop) {
 			return;
@@ -98,7 +98,7 @@ public abstract class AbstractContainerMenuMixin {
 	 */
 	@Inject(method = "clicked(IILnet/minecraft/world/inventory/ContainerInput;Lnet/minecraft/world/entity/player/Player;)V",
 			at = @At("TAIL"))
-	private void inventoryshortcuts$reflowPinnedAfterQuickMove(int slotId, int button, ContainerInput input,
+	private void inventorybutler$reflowPinnedAfterQuickMove(int slotId, int button, ContainerInput input,
 			Player player, CallbackInfo ci) {
 		if (input == ContainerInput.QUICK_MOVE && player instanceof ServerPlayer serverPlayer) {
 			PlacementHandler.reflow(serverPlayer);

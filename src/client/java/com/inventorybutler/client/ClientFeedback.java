@@ -34,12 +34,12 @@ public final class ClientFeedback {
 
 	/** 「收藏了，丢不掉」。 */
 	public static void cannotDropFavorite() {
-		show("inventoryshortcuts.message.favorite.cannotDrop");
+		show("inventorybutler.message.favorite.cannotDrop");
 	}
 
 	/** 「收藏了，搬不走」—— Shift 快捷移动进容器被拦下时提示。 */
 	public static void cannotMoveFavorite() {
-		show("inventoryshortcuts.message.favorite.cannotMove");
+		show("inventorybutler.message.favorite.cannotMove");
 	}
 
 	/** 服务端发来的提示（{@link com.inventorybutler.network.MessagePayload}）直接按翻译键展示。 */
