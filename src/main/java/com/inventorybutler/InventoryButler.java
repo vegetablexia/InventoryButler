@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
  * <p>服务端负责一切会改变物品的事情：改收藏标记、整理、销毁。
  * 客户端只负责「好看」和「好按」：绘制星标、垃圾桶按钮，以及把按键/鼠标操作翻译成网络包。</p>
  */
-public class InventoryShortcuts implements ModInitializer {
+public class InventoryButler implements ModInitializer {
 	public static final String MOD_ID = "inventorybutler";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -36,7 +36,7 @@ public class InventoryShortcuts implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		LOGGER.info("Inventory Shortcuts 正在加载（收藏锁定 / 归位标记 / 垃圾桶 / 一键整理）");
+		LOGGER.info("Inventory Butler 正在加载（收藏锁定 / 归位标记 / 垃圾桶 / 一键整理）");
 
 		ModConfig.load(LOGGER);
 

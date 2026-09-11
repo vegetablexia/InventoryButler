@@ -1,7 +1,7 @@
 package com.inventorybutler.server;
 
 import com.inventorybutler.FavoriteStacks;
-import com.inventorybutler.InventoryShortcuts;
+import com.inventorybutler.InventoryButler;
 import com.inventorybutler.ModConfig;
 import com.inventorybutler.network.MessagePayload;
 import com.inventorybutler.network.TrashPayload;
@@ -44,7 +44,7 @@ public final class TrashHandler {
 			case TrashPayload.ACTION_SLOT -> fromSlot(player, menu, payload.slotId());
 			case TrashPayload.ACTION_CARRIED -> fromCarried(player, menu);
 			case TrashPayload.ACTION_RECLAIM -> reclaim(player, menu);
-			default -> InventoryShortcuts.LOGGER.warn("未知的垃圾桶动作: {}", payload.action());
+			default -> InventoryButler.LOGGER.warn("未知的垃圾桶动作: {}", payload.action());
 		}
 	}
 

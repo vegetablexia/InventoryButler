@@ -1,7 +1,7 @@
 package com.inventorybutler.server;
 
 import com.inventorybutler.FavoriteStacks;
-import com.inventorybutler.InventoryShortcuts;
+import com.inventorybutler.InventoryButler;
 import com.inventorybutler.ModConfig;
 import com.inventorybutler.network.MessagePayload;
 import com.inventorybutler.network.PinPayload;
@@ -124,7 +124,7 @@ public final class PlacementHandler {
 		ServerPlayNetworking.send(player, new MessagePayload(nowPinned
 				? "inventorybutler.message.pin.on"
 				: "inventorybutler.message.pin.off"));
-		InventoryShortcuts.LOGGER.debug("玩家 {} {} 背包第 {} 格的归位标记",
+		InventoryButler.LOGGER.debug("玩家 {} {} 背包第 {} 格的归位标记",
 				player.getGameProfile().name(), nowPinned ? "设置" : "取消", home);
 
 		sync(player);

@@ -1,6 +1,6 @@
 package com.inventorybutler.network;
 
-import com.inventorybutler.InventoryShortcuts;
+import com.inventorybutler.InventoryButler;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -10,7 +10,7 @@ import net.minecraft.resources.Identifier;
 /** 客户端 -> 服务端：切换某个槽位物品的收藏状态。 */
 public record FavoriteTogglePayload(int containerId, int slotId) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<FavoriteTogglePayload> TYPE =
-			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryShortcuts.MOD_ID, "favorite_toggle"));
+			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "favorite_toggle"));
 
 	public static final StreamCodec<RegistryFriendlyByteBuf, FavoriteTogglePayload> STREAM_CODEC =
 			StreamCodec.composite(

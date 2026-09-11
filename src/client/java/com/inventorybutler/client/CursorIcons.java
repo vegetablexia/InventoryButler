@@ -1,6 +1,6 @@
 package com.inventorybutler.client;
 
-import com.inventorybutler.InventoryShortcuts;
+import com.inventorybutler.InventoryButler;
 import com.inventorybutler.ModConfig;
 import com.inventorybutler.client.mixin.CursorTypeInvoker;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -204,8 +204,8 @@ public final class CursorIcons {
 			long handle = GLFW.glfwCreateCursor(image.get(0), HOTSPOT, HOTSPOT);
 			if (handle == 0L) {
 				unavailable = true;
-				InventoryShortcuts.LOGGER.warn("[{}] 创建自定义光标失败（GLFW 返回 0），指针图标功能关闭",
-						InventoryShortcuts.MOD_ID);
+				InventoryButler.LOGGER.warn("[{}] 创建自定义光标失败（GLFW 返回 0），指针图标功能关闭",
+						InventoryButler.MOD_ID);
 				return null;
 			}
 
@@ -217,8 +217,8 @@ public final class CursorIcons {
 			return type;
 		} catch (Throwable t) {
 			unavailable = true;
-			InventoryShortcuts.LOGGER.warn("[{}] 创建自定义光标时出错，指针图标功能关闭: {}",
-					InventoryShortcuts.MOD_ID, t.toString());
+			InventoryButler.LOGGER.warn("[{}] 创建自定义光标时出错，指针图标功能关闭: {}",
+					InventoryButler.MOD_ID, t.toString());
 			return null;
 		} finally {
 			if (image != null) {
@@ -244,7 +244,7 @@ public final class CursorIcons {
 				ctor.setAccessible(true);
 				return ctor.newInstance(name, handle);
 			} catch (Throwable fallback) {
-				InventoryShortcuts.LOGGER.warn("[{}] 无法构造 CursorType: {}", InventoryShortcuts.MOD_ID, fallback.toString());
+				InventoryButler.LOGGER.warn("[{}] 无法构造 CursorType: {}", InventoryButler.MOD_ID, fallback.toString());
 				return null;
 			}
 		}

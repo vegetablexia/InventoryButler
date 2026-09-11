@@ -1,6 +1,6 @@
 package com.inventorybutler.client;
 
-import com.inventorybutler.InventoryShortcuts;
+import com.inventorybutler.InventoryButler;
 import com.inventorybutler.network.MessagePayload;
 import com.inventorybutler.network.PinSyncPayload;
 import com.inventorybutler.network.TrashSyncPayload;
@@ -20,7 +20,7 @@ import org.lwjgl.glfw.GLFW;
  * 归位标记）镜像到本地供绘制使用。真正的逻辑全部在 {@code AbstractContainerScreenMixin}
  * 里（因为它需要槽位信息），以及服务端的几个 Handler 里。</p>
  */
-public class InventoryShortcutsClient implements ClientModInitializer {
+public class InventoryButlerClient implements ClientModInitializer {
 	/**
 	 * 按键分类。
 	 *
@@ -30,7 +30,7 @@ public class InventoryShortcutsClient implements ClientModInitializer {
 	 */
 	public static final KeyMapping.Category CATEGORY =
 			KeyMapping.Category.register(
-					Identifier.fromNamespaceAndPath(InventoryShortcuts.MOD_ID, "main"));
+					Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "main"));
 
 	private static KeyMapping sortKey;
 	private static KeyMapping sortAltKey;
@@ -82,7 +82,7 @@ public class InventoryShortcutsClient implements ClientModInitializer {
 			ScreenMessage.clear();
 		});
 
-		InventoryShortcuts.LOGGER.info("Inventory Shortcuts 客户端已就绪");
+		InventoryButler.LOGGER.info("Inventory Butler 客户端已就绪");
 	}
 
 	public static KeyMapping sortKey() {

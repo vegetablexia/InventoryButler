@@ -1,6 +1,6 @@
 package com.inventorybutler.network;
 
-import com.inventorybutler.InventoryShortcuts;
+import com.inventorybutler.InventoryButler;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -17,7 +17,7 @@ public record TrashPayload(int containerId, int slotId, int action) implements C
 	public static final int ACTION_RECLAIM = 2;
 
 	public static final CustomPacketPayload.Type<TrashPayload> TYPE =
-			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryShortcuts.MOD_ID, "trash"));
+			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "trash"));
 
 	public static final StreamCodec<RegistryFriendlyByteBuf, TrashPayload> STREAM_CODEC =
 			StreamCodec.composite(

@@ -1,6 +1,6 @@
 package com.inventorybutler.network;
 
-import com.inventorybutler.InventoryShortcuts;
+import com.inventorybutler.InventoryButler;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -20,7 +20,7 @@ import net.minecraft.resources.Identifier;
  */
 public record MessagePayload(String key) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<MessagePayload> TYPE =
-			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryShortcuts.MOD_ID, "message"));
+			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "message"));
 
 	public static final StreamCodec<RegistryFriendlyByteBuf, MessagePayload> STREAM_CODEC =
 			StreamCodec.composite(ByteBufCodecs.STRING_UTF8, MessagePayload::key, MessagePayload::new);

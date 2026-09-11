@@ -1,7 +1,7 @@
 package com.inventorybutler.server;
 
 import com.inventorybutler.FavoriteStacks;
-import com.inventorybutler.InventoryShortcuts;
+import com.inventorybutler.InventoryButler;
 import com.inventorybutler.ModConfig;
 import com.inventorybutler.network.FavoriteTogglePayload;
 import com.inventorybutler.network.MessagePayload;
@@ -42,7 +42,7 @@ public final class FavoriteHandler {
 		ServerPlayNetworking.send(player, new MessagePayload(nowFavorite
 				? "inventorybutler.message.favorite.on"
 				: "inventorybutler.message.favorite.off"));
-		InventoryShortcuts.LOGGER.debug("玩家 {} 把 {} {} 了",
+		InventoryButler.LOGGER.debug("玩家 {} 把 {} {} 了",
 				player.getGameProfile().name(),
 				BuiltInRegistries.ITEM.getKey(stack.getItem()),
 				nowFavorite ? "收藏" : "取消收藏");

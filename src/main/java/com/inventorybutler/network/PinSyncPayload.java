@@ -1,6 +1,6 @@
 package com.inventorybutler.network;
 
-import com.inventorybutler.InventoryShortcuts;
+import com.inventorybutler.InventoryButler;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -21,7 +21,7 @@ import java.util.List;
  */
 public record PinSyncPayload(List<Integer> slots, List<ItemStack> items) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<PinSyncPayload> TYPE =
-			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryShortcuts.MOD_ID, "pin_sync"));
+			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "pin_sync"));
 
 	/**
 	 * 手写 codec 而不是 {@code StreamCodec.composite}：这是两个需要保持等长的 list

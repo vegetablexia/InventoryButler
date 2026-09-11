@@ -18,7 +18,7 @@ import java.nio.file.Path;
  */
 public final class ModConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve(InventoryShortcuts.MOD_ID + ".json");
+	private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve(InventoryButler.MOD_ID + ".json");
 
 	/** 收藏/锁定 */
 	public static boolean favoriteEnabled = true;
@@ -86,7 +86,7 @@ public final class ModConfig {
 			needsRewrite = root.has("gesturesEnabled") || root.has("wheelItemsPerScroll")
 					|| root.has("wheelWholeStackOnShift") || root.has("leftDragDistribute");
 		} catch (Exception e) {
-			logger.warn("[{}] 配置文件解析失败，使用默认值: {}", InventoryShortcuts.MOD_ID, e.toString());
+			logger.warn("[{}] 配置文件解析失败，使用默认值: {}", InventoryButler.MOD_ID, e.toString());
 			needsRewrite = true;
 		}
 		if (needsRewrite) {
@@ -109,7 +109,7 @@ public final class ModConfig {
 			Files.createDirectories(PATH.getParent());
 			Files.writeString(PATH, GSON.toJson(root), StandardCharsets.UTF_8);
 		} catch (IOException e) {
-			InventoryShortcuts.LOGGER.warn("无法写入配置文件 {}", PATH, e);
+			InventoryButler.LOGGER.warn("无法写入配置文件 {}", PATH, e);
 		}
 	}
 

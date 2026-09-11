@@ -7,7 +7,7 @@ import com.inventorybutler.client.ClientPinState;
 import com.inventorybutler.client.ClientTrashState;
 import com.inventorybutler.client.CursorIcons;
 import com.inventorybutler.client.InventoryOverlay;
-import com.inventorybutler.client.InventoryShortcutsClient;
+import com.inventorybutler.client.InventoryButlerClient;
 import com.inventorybutler.client.ScreenMessage;
 import com.inventorybutler.client.SlotSections;
 import com.inventorybutler.network.FavoriteTogglePayload;
@@ -126,7 +126,7 @@ public abstract class AbstractContainerScreenMixin {
 		// 那是很顺手的老习惯，不该被抢走；而且创造模式物品栏本来也没什么好整理的，
 		// 所以那边不做中键整理，把中键还给原版。
 		if (!(screen() instanceof CreativeModeInventoryScreen)
-				&& matchesMouse(InventoryShortcutsClient.sortKey(), event)) {
+				&& matchesMouse(InventoryButlerClient.sortKey(), event)) {
 			if (ModConfig.sortEnabled) {
 				// 整理不发任何提示 —— 这是个高频操作，弹一行字反而挡住视线
 				ClientPlayNetworking.send(new SortPayload(menu.containerId));
@@ -243,8 +243,8 @@ public abstract class AbstractContainerScreenMixin {
 
 		// 中键是鼠标事件，永远不会以键盘事件的形式到这里；
 		// 这里管的是 R 这个第二绑定（以及玩家自己改到键盘上的任何键）。
-		if (matches(InventoryShortcutsClient.sortKey(), event)
-				|| matches(InventoryShortcutsClient.sortAltKey(), event)) {
+		if (matches(InventoryButlerClient.sortKey(), event)
+				|| matches(InventoryButlerClient.sortAltKey(), event)) {
 			if (ModConfig.sortEnabled) {
 				ClientPlayNetworking.send(new SortPayload(menu.containerId));
 			}
@@ -252,7 +252,7 @@ public abstract class AbstractContainerScreenMixin {
 			return;
 		}
 
-		if (matches(InventoryShortcutsClient.trashKey(), event)) {
+		if (matches(InventoryButlerClient.trashKey(), event)) {
 			if (ModConfig.trashEnabled && hoveredSlot != null && SlotSections.acceptsTransfer(hoveredSlot)) {
 				ClientPlayNetworking.send(new TrashPayload(
 						menu.containerId, hoveredSlot.index, TrashPayload.ACTION_SLOT));
@@ -261,7 +261,7 @@ public abstract class AbstractContainerScreenMixin {
 			return;
 		}
 
-		if (matches(InventoryShortcutsClient.favoriteKey(), event)) {
+		if (matches(InventoryButlerClient.favoriteKey(), event)) {
 			if (ModConfig.favoriteEnabled && hoveredSlot != null && !hoveredSlot.getItem().isEmpty()) {
 				ClientPlayNetworking.send(new FavoriteTogglePayload(menu.containerId, hoveredSlot.index));
 			}
@@ -273,7 +273,7 @@ public abstract class AbstractContainerScreenMixin {
 		//
 		// 只认玩家背包 0-35 —— 箱子的格子、护甲格没有「归位」可言。
 		// 服务端还会再挡一道，这里先挡是为了不白发一个注定被丢掉的包。
-		if (matches(InventoryShortcutsClient.pinKey(), event)) {
+		if (matches(InventoryButlerClient.pinKey(), event)) {
 			if (ModConfig.pinEnabled && hoveredSlot != null
 					&& SlotSections.playerIndex(hoveredSlot) >= 0) {
 				ClientPlayNetworking.send(new PinPayload(menu.containerId, hoveredSlot.index));

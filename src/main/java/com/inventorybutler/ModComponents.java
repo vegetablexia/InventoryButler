@@ -19,7 +19,7 @@ import net.minecraft.util.Unit;
 public final class ModComponents {
 	public static final DataComponentType<Unit> FAVORITE = Registry.register(
 			BuiltInRegistries.DATA_COMPONENT_TYPE,
-			Identifier.fromNamespaceAndPath(InventoryShortcuts.MOD_ID, "favorite"),
+			Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "favorite"),
 			DataComponentType.<Unit>builder()
 					.persistent(Unit.CODEC)
 					.networkSynchronized(Unit.STREAM_CODEC)
