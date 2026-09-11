@@ -206,24 +206,15 @@ foojay 解析器会自动下载。
 ./gradlew runClient    # 开发环境启动游戏
 ```
 
-### ⚠️ 改完 mixin，先跑自检再启动
+### ⚠️ 关于 Mixin 的一个坑
 
-```bash
-python tools/verify_mixins.py
-```
-
-脚本在启动前核对所有 mixin：读 `*.mixins.json` → 抓 `@Mixin` 目标、`@Shadow`、
-`@Inject` 描述符 → `javap -p -s` 对 MC jar 逐个验证。**为什么必须有**：
 Mixin 0.8.x 的 `@Shadow`「方法沿继承链找、字段不找」，而注解处理器会沿继承链找
 —— 所以 shadow 父类字段是「编译 0 警告、启动即崩」
 （本项目踩过：`@Shadow Minecraft minecraft` 声明在父类 `Screen` 上）。
-注意：**mixin 源码的注释里不要出现字面的 "@Shadow"**，会被脚本误当成真注解解析。
 
 ### 下载被拦时
 
 - 证书错误（PKIX）：把代理根证书导入 JDK 信任库（`keytool -importcert`）；
-- `piston-data.mojang.com` 拉不动：`python tools/fetch_minecraft.py 26.2` 走 BMCLAPI
-  镜像下载并按 Loom 期望填缓存；
 - Gradle 本体慢：`gradle-wrapper.properties` 的 `distributionUrl` 换腾讯镜像。
 
 ---
@@ -270,11 +261,6 @@ src/client/java/com/inventorybutler/client/
 ├── SlotSections.java                槽位分区（哪些格子允许删除、哪些是玩家背包）
 ├── ClientTrashState.java            垃圾桶客户端镜像
 └── ClientPinState.java              归位标记客户端镜像
-
-tools/
-├── gen_icon.py                      生成 mod 图标
-├── verify_mixins.py                 启动前 mixin 自检
-└── fetch_minecraft.py               网络被拦时从镜像拉 MC jar
 ```
 
 ---
