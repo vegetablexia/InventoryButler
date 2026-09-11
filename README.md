@@ -232,7 +232,7 @@ Mixin 0.8.x 的 `@Shadow`「方法沿继承链找、字段不找」，而注解�
 ## 七、代码结构
 
 ```
-src/main/java/com/example/inventoryshortcuts/
+src/main/java/com/inventorybutler/
 ├── InventoryShortcuts.java          入口：注册数据组件、网络包、服务端接收器
 ├── ModComponents.java               inventoryshortcuts:favorite 数据组件
 ├── FavoriteStacks.java              收藏状态读写
@@ -256,7 +256,7 @@ src/main/java/com/example/inventoryshortcuts/
     ├── InventorySortHandler.java    整理算法（收藏物钉住、归位物回预留格）
     └── TrashHandler.java            垃圾桶（含取回/撤销）
 
-src/client/java/com/example/inventoryshortcuts/client/
+src/client/java/com/inventorybutler/client/
 ├── InventoryShortcutsClient.java    客户端入口：按键绑定、收包、断线清理
 ├── ClientFeedback.java              提示分流：容器界面内 → ScreenMessage；界面外 → 动作栏
 ├── ScreenMessage.java               界面内轻提示状态（2.5s）

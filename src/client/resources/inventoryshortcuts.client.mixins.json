@@ -1,6 +1,6 @@
 {
 	"required": true,
-	"package": "com.example.inventoryshortcuts.client.mixin",
+	"package": "com.inventorybutler.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
 		"AbstractContainerScreenMixin",

@@ -13,10 +13,10 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.example.inventoryshortcuts.InventoryShortcuts"
+			"com.inventorybutler.InventoryShortcuts"
 		],
 		"client": [
-			"com.example.inventoryshortcuts.client.InventoryShortcutsClient"
+			"com.inventorybutler.client.InventoryShortcutsClient"
 		]
 	},
 	"mixins": [
