@@ -1,0 +1,21 @@
+{
+	"key.category.inventoryshortcuts.main": "泰拉式物品栏快捷键",
+
+	"key.inventoryshortcuts.sort": "一键整理物品栏",
+	"key.inventoryshortcuts.sort.alt": "一键整理物品栏（备用键）",
+	"key.inventoryshortcuts.trash": "把指向的物品丢进垃圾桶",
+	"key.inventoryshortcuts.favorite": "收藏/取消收藏指向的物品",
+	"key.inventoryshortcuts.pin": "标记/取消归位位置（这一格留给这个物品）",
+
+	"inventoryshortcuts.tooltip.trash.empty": "垃圾桶是空的",
+	"inventoryshortcuts.tooltip.trash.reclaim": "点击取回",
+
+	"inventoryshortcuts.message.favorite.on": "已收藏",
+	"inventoryshortcuts.message.favorite.off": "已取消收藏",
+	"inventoryshortcuts.message.favorite.protected": "该物品已被收藏",
+	"inventoryshortcuts.message.favorite.cannotDrop": "该物品已被收藏",
+	"inventoryshortcuts.message.favorite.cannotMove": "该物品已被收藏",
+
+	"inventoryshortcuts.message.pin.on": "已标记归位位置",
+	"inventoryshortcuts.message.pin.off": "已取消归位标记"
+}

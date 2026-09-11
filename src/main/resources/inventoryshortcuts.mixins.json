@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"package": "com.example.inventoryshortcuts.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"AbstractContainerMenuMixin",
+		"InventoryAddMixin",
+		"ServerPlayerDropMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

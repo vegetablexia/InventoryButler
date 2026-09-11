@@ -1,0 +1,48 @@
+# gradle
+
+.gradle/
+build/
+out/
+classes/
+
+# eclipse
+
+*.launch
+
+# idea
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# vscode
+
+.settings/
+.vscode/
+bin/
+.classpath
+.project
+
+# macos
+
+*.DS_Store
+
+# fabric
+
+run/
+
+# 本地部署备份（发布用 GitHub Releases / Modrinth，不进仓库）
+
+backups/
+
+# 生成的预览图
+
+ui_preview.svg
+
+# java
+
+hs_err_*.log
+replay_*.log
+*.hprof
+*.jfr

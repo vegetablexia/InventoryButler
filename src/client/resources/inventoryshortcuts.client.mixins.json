@@ -1,0 +1,18 @@
+{
+	"required": true,
+	"package": "com.example.inventoryshortcuts.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"AbstractContainerScreenMixin",
+		"AbstractRecipeBookScreenAccessor",
+		"CursorTypeInvoker",
+		"GuiGraphicsExtractorMixin",
+		"LocalPlayerDropMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

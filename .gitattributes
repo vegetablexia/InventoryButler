@@ -1,0 +1,10 @@
+# 统一换行符：仓库内一律 LF，避免 Windows/macOS 协作时出现混合换行
+* text=auto eol=lf
+
+# Windows 批处理必须 CRLF，否则 cmd 下可能跑不起来
+gradlew.bat text eol=crlf
+
+# 二进制文件不做任何转换
+*.jar binary
+*.png binary
+*.ico binary
