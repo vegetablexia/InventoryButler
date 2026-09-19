@@ -9,6 +9,7 @@
 
 	"inventorybutler.tooltip.trash.empty": "Trash is empty",
 	"inventorybutler.tooltip.trash.reclaim": "Click to take back",
+	"inventorybutler.tooltip.trash.blocked": "Favorited: cannot be trashed",
 
 	"inventorybutler.message.favorite.on": "Favorited",
 	"inventorybutler.message.favorite.off": "Unfavorited",

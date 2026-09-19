@@ -19,13 +19,12 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.gui.screens.inventory.AbstractRecipeBookScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -53,8 +52,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  *
  * <p><b>操作表</b>（这里不再做任何鼠标拖拽 / 滚轮手势，那部分功能已移除）：</p>
  * <ul>
- *   <li><b>点垃圾桶按钮</b>：贴在配方书按钮（绿书）右边、同尺寸（20x18），
- *       内凹槽位风格的边框；没有配方书的界面回退到 GUI 右缘外侧</li>
+ *   <li><b>点垃圾桶按钮</b>：GUI 右下角、快捷栏末格正下方那块 32x27 的「口袋」，
+ *       内凹槽位风格的边框；手上拿着收藏物时显示危险态（红灰槽芯 + 深色叉），
+ *       并和取回 / 丢弃一样由服务端拒收</li>
  *   <li><b>鼠标中键</b> / <b>R</b>（可改绑）：一键整理（只整理主背包，快捷栏不动），不弹提示</li>
  *   <li><b>Shift + 点击</b>：背包里的收藏物<b>不能</b>被快捷移动进容器（服务端同样拦截；
  *       从容器往背包搬不受限）</li>
@@ -82,10 +82,7 @@ public abstract class AbstractContainerScreenMixin {
 	protected int imageWidth;
 
 	@Shadow
-	protected int leftPos;
-
-	@Shadow
-	protected int topPos;
+	protected int imageHeight;
 
 	@Shadow
 	protected abstract boolean isHovering(int x, int y, int width, int height, double mouseX, double mouseY);
@@ -194,13 +191,14 @@ public abstract class AbstractContainerScreenMixin {
 	/**
 	 * 修「点界面外的按钮时，光标上的物品被丢到地上」。
 	 *
-	 * <p>根因：自绘按钮画在 GUI 右侧外面（{@code imageWidth + 4}），点它 = 点到界面外。
+	 * <p>根因：自绘按钮画在 GUI 底边上（{@code imageHeight} 起、整体在 GUI 之外），
+	 * 点它 = 点到界面外。
 	 * 原版 {@code mouseReleased} 里有一条：只要这次点击是在界面外按下的，松手时就把
 	 * 光标上拿着的物品走 {@code slotClicked(slot, -999, button, PICKUP)} 丢出去。</p>
 	 *
-	 * <p>对整理按钮来说，这一下丢出去的东西和「整理」毫无关系，纯属误伤；
-	 * 对垃圾桶来说更糟 —— 取回时物品刚好被放到了光标上，于是「取回」变成「丢出」。
-	 * 所以这里把两种情况都吞掉：松手落在任一按钮上、或本次点击本来就是按在按钮上的。</p>
+	 * <p>对垃圾桶来说这尤其糟 —— 取回时物品刚好被放到了光标上，
+	 * 于是「取回」变成「丢出」。所以这里把两种情况都吞掉：
+	 * 松手落在按钮上、或本次点击本来就是按在按钮上的。</p>
 	 */
 	@Inject(method = "mouseReleased(Lnet/minecraft/client/input/MouseButtonEvent;)Z",
 			at = @At("HEAD"), cancellable = true)
@@ -353,11 +351,11 @@ public abstract class AbstractContainerScreenMixin {
 	}
 
 	/**
-	 * 槽位都画完之后，补上垃圾桶按钮：贴在配方书按钮（绿书）右边，和绿书排成一行。
+	 * 槽位都画完之后，补上垃圾桶按钮：GUI 右下角、快捷栏末格正下方那块「口袋」。
 	 *
-	 * <p>绿书的位置各界面不同（背包 104 / 工作台 5 / 熔炉 20，纵向全走 {@code h/2-…}），
-	 * 所以位置一律从原版 {@code getRecipeBookButtonPosition()} 换算，不写死；
-	 * 没有配方书的界面回退到 GUI 右缘外侧。</p>
+	 * <p>位置只依赖 {@code imageWidth} / {@code imageHeight}（见
+	 * {@code InventoryOverlay.buttonX} / {@code buttonY}），任何容器界面都自动成立 ——
+	 * 不需要把屏幕绝对坐标换算成 GUI 空间，也不再依赖原版配方书按钮的位置。</p>
 	 */
 	@Inject(method = "extractSlots(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V", at = @At("TAIL"))
 	private void inventorybutler$drawButtons(GuiGraphicsExtractor extractor,
@@ -376,33 +374,56 @@ public abstract class AbstractContainerScreenMixin {
 		if (ModConfig.trashEnabled) {
 			int[] pos = inventorybutler$trashButtonPos();
 			boolean hovered = isOverButton(pos[0], pos[1], mouseX, mouseY);
-			InventoryOverlay.drawTrashButton(extractor, pos[0], pos[1], hovered);
+			// 「这一下会不会被服务端拒收」要在绘制前算出来 —— 危险态是画在按钮上的前置提示，
+			// 不能等点下去收到服务端的提示才告诉玩家。口径见 inventorybutler$carriedIsProtected。
+			boolean blocked = inventorybutler$carriedIsProtected();
+			InventoryOverlay.drawTrashButton(extractor, pos[0], pos[1], hovered, blocked);
 			if (hovered) {
-				InventoryOverlay.addTrashTooltip(extractor, mouseX, mouseY);
+				InventoryOverlay.addTrashTooltip(extractor, mouseX, mouseY, blocked);
 			}
 		}
 	}
 
 	/**
-	 * 物品栏界面内的轻提示：画在 GUI 顶上方居中，带一层半透明底条保证可读。
+	 * 物品栏界面内的轻提示：画在 GUI 顶上方居中，原版底纹风格 + 淡入淡出。
 	 *
 	 * <p>动作栏文字挂在 HUD 上，容器界面打开时 HUD 不渲染 —— 收藏 / 归位 / 垃圾桶
-	 * 这些提示又全都是在界面里触发的，所以走这里显示（{@link ScreenMessage} 暂存，
-	 * {@code ClientFeedback} 负责分流）。所有容器界面（包括创造模式）都画。</p>
+	 * 这些提示又全都是在界面里触发的，所以走这里显示（{@link ScreenMessage} 暂存并
+	 * 排队，{@code ClientFeedback} 负责分流）。所有容器界面（包括创造模式）都画。</p>
+	 *
+	 * <p><b>底纹走原版色源</b>：和 {@code GuiGraphicsExtractor#textWithBackdrop} 一样，
+	 * 底色取 {@code options.getBackgroundColor(0)}（随玩家「文字背景不透明度」辅助设置走），
+	 * 文字带投影；底纹和文字的 alpha 都乘上 {@link ScreenMessage#fade()} 的淡入淡出系数。
+	 * 没有直接调 {@code textWithBackdrop} 是因为它内部 alpha 是死的，做不了渐隐。</p>
 	 */
 	@Inject(method = "extractSlots(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V", at = @At("TAIL"))
 	private void inventorybutler$drawScreenMessage(GuiGraphicsExtractor extractor,
 			int mouseX, int mouseY, CallbackInfo ci) {
 		Component message = ScreenMessage.current();
-		if (message == null || client() == null) {
+		Minecraft mc = client();
+		if (message == null || mc == null) {
 			return;
 		}
-		Font font = client().font;
+		float fade = ScreenMessage.fade();
+		if (fade <= 0f) {
+			return;
+		}
+
+		Font font = mc.font;
 		int textWidth = font.width(message);
-		int centerX = this.imageWidth / 2;
-		// 底条：比文字上下各多 2px、左右各多 4px；文字画在底条中间
-		extractor.fill(centerX - textWidth / 2 - 4, -18, centerX + textWidth / 2 + 4, -2, 0x90505050);
-		extractor.centeredText(font, message, centerX, -14, 0xFFFFFFFF);
+		int textX = this.imageWidth / 2 - textWidth / 2;
+		int textY = -14;
+		// 底纹：文字四周各外扩 2px（原版 textWithBackdrop 的习惯）
+		int backdrop = mc.options.getBackgroundColor(0.0F);
+		if (backdrop == 0) {
+			// 玩家把「文字背景不透明度」调到 0 时原版就完全不画底 ——
+			// 这里用回经典半透明深灰兜底，提示条在亮色界面上不能没有底。
+			backdrop = 0x90505050;
+		}
+		extractor.fill(textX - 2, textY - 2, textX + textWidth + 2, textY + 11,
+				ARGB.multiplyAlpha(backdrop, fade));
+		extractor.text(font, message, textX, textY,
+				ARGB.multiplyAlpha(0xFFFFFFFF, fade), true);
 	}
 
 	// ------------------------------------------------------------------
@@ -420,28 +441,52 @@ public abstract class AbstractContainerScreenMixin {
 	}
 
 	/**
-	 * 垃圾桶按钮的位置（GUI 空间）。
+	 * 垃圾桶按钮的位置（GUI 空间）：GUI 右下角、最后一行物品栏（快捷栏）末格的正下方。
 	 *
-	 * <p>带配方书的界面：绿书右边（书按钮 x + 20 宽 + 2px 缝，y 与绿书齐平）。
-	 * 绿书位置是「屏幕绝对坐标」（{@code getRecipeBookButtonPosition()} 内部加了
-	 * leftPos/topPos），这里减回去换回 GUI 空间。</p>
+	 * <p>x 取 {@code imageWidth - 32}，按钮右缘的「暗灰 ×2 + 黑 ×1」正好落在 GUI 右缘
+	 * 包边的那三列上，竖着看是一条连续的线；y 取 {@code imageHeight - 3}，顶部这 3px
+	 * 覆盖掉 GUI 底边框的「暗灰 ×2 + 黑 ×1」，两块面板灰连成一片 —— 整个按钮就像物品栏
+	 * 面板在右下角多长出来的一块口袋。</p>
 	 *
-	 * <p>没有配方书的界面（箱子、漏斗这些）：回退到 GUI 右缘外侧、第一行槽位的高度。</p>
+	 * <p>按钮上部那 3px 已经压在原版 GUI 的绘制范围之内，主体仍在 {@code imageHeight}
+	 * 之外（对原版来说属于「界面外」），所以点击的松开事件必须由
+	 * {@code inventorybutler$onMouseReleased} 拦截（见那里的说明）。</p>
+	 *
+	 * <p>所有非创造模式的容器界面共用这一个位置，不再分配方书 / 无配方书两条分支：
+	 * 位置只依赖 {@code imageWidth} / {@code imageHeight}，连屏幕绝对坐标的换算
+	 * 都不需要了。</p>
 	 */
 	private int[] inventorybutler$trashButtonPos() {
-		if (screen() instanceof AbstractRecipeBookScreen) {
-			ScreenPosition book = ((AbstractRecipeBookScreenAccessor) screen())
-					.inventorybutler$recipeBookButtonPosition();
-			return new int[]{
-					InventoryOverlay.bookSideButtonX(book.x() - this.leftPos),
-					InventoryOverlay.bookSideButtonY(book.y() - this.topPos),
-			};
-		}
-		return new int[]{InventoryOverlay.fallbackButtonX(this.imageWidth), InventoryOverlay.FALLBACK_Y};
+		return new int[]{
+				InventoryOverlay.buttonX(this.imageWidth),
+				InventoryOverlay.buttonY(this.imageHeight),
+		};
 	}
 
 	/**
-	 * 要不要画工具栏那一列按钮。
+	 * 这一次点垃圾桶按钮会不会被服务端拒收 —— 也就是「手上拿着的物品是收藏物」。
+	 *
+	 * <p>⚠️ <b>口径必须与 {@code TrashHandler.rejectIfProtected} 逐字一致</b>，
+	 * 否则就是假反馈：按钮画着「禁止」其实删得掉，或者看着能删、按下去却被拒。
+	 * 那边判的是 {@code ModConfig.favoriteProtectFromTrash && FavoriteStacks.isFavorite(stack)}，
+	 * <b>不含 {@code favoriteEnabled}</b> —— 后者只挡 Alt+左键的收藏开关
+	 * （见 {@code FavoriteHandler.toggle}），并不参与保护逻辑。所以这里也不能加：
+	 * 否则在「关掉收藏、但保护还开着」的配置下，服务端照拒，界面却一声不吭。</p>
+	 *
+	 * <p>只判「手上拿着的」—— 点按钮的动作是
+	 * {@code carrying || 桶空 ? ACTION_CARRIED : ACTION_RECLAIM}，
+	 * 而取回（{@code reclaim}）那条路径服务端从来不做保护判定。
+	 * 手是空的时候 {@code isFavorite} 必然为 false，所以不需要额外分支。</p>
+	 */
+	private boolean inventorybutler$carriedIsProtected() {
+		if (!ModConfig.favoriteProtectFromTrash || this.menu == null) {
+			return false;
+		}
+		return FavoriteStacks.isFavorite(this.menu.getCarried());
+	}
+
+	/**
+	 * 要不要画垃圾桶按钮。
 	 *
 	 * <p>创造模式物品栏右下角本来就自带一个「销毁物品」格，再加上它的界面布局完全不同
 	 * （标签页 / 搜索框 / 滚动条），往里塞按钮很容易打架。所以那边不画 ——

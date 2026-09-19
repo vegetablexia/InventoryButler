@@ -9,6 +9,7 @@
 
 	"inventorybutler.tooltip.trash.empty": "垃圾桶是空的",
 	"inventorybutler.tooltip.trash.reclaim": "点击取回",
+	"inventorybutler.tooltip.trash.blocked": "该物品已被收藏，丢不进垃圾桶",
 
 	"inventorybutler.message.favorite.on": "已收藏",
 	"inventorybutler.message.favorite.off": "已取消收藏",

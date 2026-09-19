@@ -211,7 +211,7 @@
 foojay 解析器会自动下载。
 
 ```bash
-./gradlew build        # 产物在 build/libs/inventorybutler-1.0.1.jar
+./gradlew build        # 产物在 build/libs/inventorybutler-1.0.2.jar
 ./gradlew runClient    # 开发环境启动游戏
 ```
 

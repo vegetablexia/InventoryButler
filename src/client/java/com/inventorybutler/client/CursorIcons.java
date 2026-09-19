@@ -86,7 +86,8 @@ public final class CursorIcons {
 	 */
 	private static final double STAR_CENTER_Y = 0.541;
 
-	private static final int STAR_FILL = 0xFFFFC93C;
+	/** 与角标同一颗金（InventoryOverlay.STAR_COLOR），整套 UI 只用一种金色。 */
+	private static final int STAR_FILL = 0xFFFFD64A;
 	private static final int STAR_LINE = 0xFF5A3A00;
 	private static final int TRASH_FILL = 0xFFE2E2E2;
 	private static final int TRASH_LINE = 0xFF2B2B2B;
@@ -278,25 +279,26 @@ public final class CursorIcons {
 	 * 在 16x16 逻辑网格上点采样出整张点阵（0 = 透明，否则 ARGB）。
 	 *
 	 * <p>每个逻辑画素只取<b>中心一个点</b>做判定，要么整个画素着色、要么整个透明，
-	 * 没有半透明的过渡像素 —— 硬边像素画就是这么来的。轮廓 / 填充的区分沿用
-	 * 「内缩一圈」的思路：落在内缩轮廓之外的一圈画成描边色。</p>
+	 * 没有半透明的过渡像素 —— 硬边像素画就是这么来的。星星用解析式多边形
+	 * （内缩一圈当描边）；垃圾桶直接查 {@link #TRASH_ART} 点阵 —— 和按钮上
+	 * 那个 12x12 图标是同一个造型（提手 → 盖 → 缝 → 带透气孔的梯形桶身），
+	 * 像素画手画比解析式几何更可控。</p>
 	 */
 	private static int[][] rasterize(boolean star) {
+		if (!star) {
+			return trashMap();
+		}
 		int[][] map = new int[LOGICAL][LOGICAL];
 		for (int ly = 0; ly < LOGICAL; ly++) {
 			for (int lx = 0; lx < LOGICAL; lx++) {
 				double u = (lx + 0.5) / LOGICAL;
 				double v = (ly + 0.5) / LOGICAL;
-				boolean outer = star ? insidePolygon(STAR_OUTER, u, v) : trashOuter(u, v);
+				boolean outer = insidePolygon(STAR_OUTER, u, v);
 				if (!outer) {
 					continue;
 				}
-				boolean inner = star ? insidePolygon(STAR_INNER, u, v) : trashInner(u, v);
-				if (!inner) {
-					map[ly][lx] = star ? STAR_LINE : TRASH_LINE;
-				} else {
-					map[ly][lx] = star ? STAR_FILL : TRASH_FILL;
-				}
+				boolean inner = insidePolygon(STAR_INNER, u, v);
+				map[ly][lx] = inner ? STAR_FILL : STAR_LINE;
 			}
 		}
 		return map;
@@ -333,39 +335,53 @@ public final class CursorIcons {
 		return inside;
 	}
 
-	/**
-	 * 垃圾桶外轮廓：<b>敞口、顶部向内凹</b>的桶 —— 两侧的口沿立壁比中间的口沿
-	 * 高出一截，中间凹下去形成「往里扔」的开口。
-	 *
-	 * <p>和按钮上的垃圾桶图标同一个造型：没有盖子和提手，两条立壁 + 凹下去的桶口
-	 * 就是辨识度本身。立壁保持实心深色 —— 16 逻辑像素上再掏孔就糊成一团了。</p>
-	 */
-	private static boolean trashOuter(double u, double v) {
-		// 两侧的口沿立壁：比桶身上沿（0.36）再高出约 3 个逻辑像素
-		if (((u >= 0.17 && u <= 0.33) || (u >= 0.67 && u <= 0.83)) && v >= 0.13 && v <= 0.36) {
-			return true;
-		}
-		return trashBody(u, v, 0.0);
-	}
+	// ------------------------------------------------------------------
+	// 垃圾桶点阵：与 InventoryOverlay 按钮图标同一造型
+	//
+	//   '#'=深色（提手/盖子/桶身边框/透气孔）  'o'=浅色桶身填充  '.'=透明
+	//
+	// 16 逻辑像素，每行 16 列：
+	//   提手（2x2，居中） → 盖子（10x2） → 空 1 行 → 桶身（深色边框 10 宽、
+	//   浅色内芯 8 宽、两条深色透气孔分三格） → 底边收窄 1px（梯形感）。
+	// 深描边 + 浅填充是为了光标在任何明暗背景上都看得清 —— 按钮图标是
+	// 深色压浅底，光标反过来，因为光标底下是什么界面谁也说不准。
+	// ------------------------------------------------------------------
 
-	/** 垃圾桶内部（填充色）：只有桶身填浅色，口沿立壁保持深色描边。 */
-	private static boolean trashInner(double u, double v) {
-		return trashBody(u, v, 0.045);
-	}
+	private static final String[] TRASH_ART = {
+			"................",
+			".......##.......",
+			".......##.......",
+			"...##########...",
+			"...##########...",
+			"................",
+			"...##########...",
+			"...#oo#oo#oo#...",
+			"...#oo#oo#oo#...",
+			"...#oo#oo#oo#...",
+			"...#oo#oo#oo#...",
+			"...#oo#oo#oo#...",
+			"...#oo#oo#oo#...",
+			"....########....",
+			"................",
+			"................",
+	};
 
-	/**
-	 * 桶身：上宽下窄的梯形。
-	 *
-	 * <p>{@code inset} 同时收紧上下边缘和左右半宽，就把梯形整体缩小了一圈。</p>
-	 */
-	private static boolean trashBody(double u, double v, double inset) {
-		double top = 0.36 + inset;
-		double bottom = 0.95 - inset;
-		if (v < top || v > bottom) {
-			return false;
+	private static int[][] trashMap;
+
+	private static int[][] trashMap() {
+		if (trashMap == null) {
+			trashMap = new int[LOGICAL][LOGICAL];
+			for (int row = 0; row < LOGICAL; row++) {
+				String line = TRASH_ART[row];
+				for (int col = 0; col < LOGICAL; col++) {
+					switch (line.charAt(col)) {
+						case '#' -> trashMap[row][col] = TRASH_LINE;
+						case 'o' -> trashMap[row][col] = TRASH_FILL;
+						default -> trashMap[row][col] = 0;
+					}
+				}
+			}
 		}
-		double t = (v - top) / (bottom - top);
-		double halfWidth = (0.31 - inset) + ((0.22 - inset) - (0.31 - inset)) * t;
-		return halfWidth > 0 && u >= 0.5 - halfWidth && u <= 0.5 + halfWidth;
+		return trashMap;
 	}
 }
