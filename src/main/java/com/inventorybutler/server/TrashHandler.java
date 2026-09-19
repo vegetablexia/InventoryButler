@@ -114,6 +114,16 @@ public final class TrashHandler {
 		} else {
 			TRASH.put(player.getUUID(), stack);
 		}
+		sync(player);
+	}
+
+	/**
+	 * 把当前垃圾桶内容推给客户端（客户端那份只用来画按钮）。
+	 *
+	 * <p>进服时也要调一次：垃圾桶只活在服务端内存里、玩家退出时已被清空，
+	 * 客户端却还留着上一个存档的镜像 —— 不推的话按钮上会挂着一个取不回来的物品。</p>
+	 */
+	public static void sync(ServerPlayer player) {
 		ServerPlayNetworking.send(player, new TrashSyncPayload(getTrash(player)));
 	}
 

@@ -230,4 +230,15 @@ public final class PlacementHandler {
 		}
 		ServerPlayNetworking.send(player, new PinSyncPayload(List.copyOf(slots), List.copyOf(items)));
 	}
+
+	/**
+	 * 玩家断开时清空标记。
+	 *
+	 * <p>两件事一起办：一是别让 {@link #PINNED} 跟着玩家 UUID 一直攒着（内存泄漏），
+	 * 二是同一玩家下次再进来时不该看到上一局的幽灵图标 —— 那时候物品早就换了一批，
+	 * 残留的预留位只会让人迷惑。重进后重新按 T 标记即可。</p>
+	 */
+	public static void clear(ServerPlayer player) {
+		PINNED.remove(player.getUUID());
+	}
 }

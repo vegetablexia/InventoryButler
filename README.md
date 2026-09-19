@@ -114,6 +114,7 @@
 | `message.favorite.cannotMove` | 该物品已被收藏 | 收藏物 Shift+点击 |
 | `message.pin.on` | 已标记归位位置 | T 打标记 |
 | `message.pin.off` | 已取消归位标记 | T 取消 |
+| `message.sort.failed` | 背包状态异常，整理已取消 | 整理时容量预检不通过（极罕见，见下） |
 | `tooltip.trash.empty` | 垃圾桶是空的 | 悬停垃圾桶按钮 |
 | `tooltip.trash.reclaim` | 点击取回 | 垃圾桶有东西时悬停 |
 
@@ -163,6 +164,14 @@
 两条路各拦一道，服务端全部兜底（防绕过）。同理，画在 GUI 外的按钮「点到界面外」
 会把光标物品丢出，所以按下与配对的 `mouseReleased` 必须**一起吞掉**。
 
+**整理绝不丢东西：先算清，再落盘。**
+整理分两步 —— 池子内容和预留格归属全部先在内存里算出来，确认放得下之后才动背包。
+原理上池子必然放得下（合并只会减少占用格数），但「预留了归位标记、物品却不在背包里」
+的空格会白占一格容量；所以池子比普通空格多的时候，**先牺牲还没用上的幽灵预留格**，
+也不让物品消失（幽灵只是一条提示，物品才是玩家的东西）。真要碰上异常物品栈
+（比如单格数量超过 `maxStackSize`）导致彻底放不下，就整单放弃、背包一点不动，
+并提示「背包状态异常，整理已取消」—— 而不是把多余的物品悄悄扔掉。
+
 ---
 
 ## 四、配置
@@ -202,9 +211,22 @@
 foojay 解析器会自动下载。
 
 ```bash
-./gradlew build        # 产物在 build/libs/inventorybutler-1.0.0.jar
+./gradlew build        # 产物在 build/libs/inventorybutler-1.0.1.jar
 ./gradlew runClient    # 开发环境启动游戏
 ```
+
+### 提交前先跑一遍 Mixin 静态自检
+
+下面那个 `@Shadow` 父类字段的坑，编译器抓不到、启动才崩。所以启动游戏之前先用
+`tools/verify_mixins.py` 对着 MC jar 核一遍：
+
+```bash
+python tools/verify_mixins.py --jar <path/to/client.jar> \
+       --javap "C:/Program Files/Java/<jdk>/bin/javap.exe"
+```
+
+它读 `*.mixins.json` → 定位 mixin 源文件 → 把每个 `@Shadow` 字段 / 方法与每个 `@Inject`
+的目标描述符拿 `javap -p -s` 逐条核对。退出码非 0 就说明有会崩的地方。
 
 ### ⚠️ 关于 Mixin 的一个坑
 
@@ -261,6 +283,9 @@ src/client/java/com/inventorybutler/client/
 ├── SlotSections.java                槽位分区（哪些格子允许删除、哪些是玩家背包）
 ├── ClientTrashState.java            垃圾桶客户端镜像
 └── ClientPinState.java              归位标记客户端镜像
+
+tools/
+└── verify_mixins.py                 启动前的 Mixin 静态自检（见「构建」一节）
 ```
 
 ---

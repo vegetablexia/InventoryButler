@@ -15,4 +15,4 @@ plugins {
 }
 
 // Should match your modid
-rootProject.name = 'inventoryshortcuts'
+rootProject.name = 'inventorybutler'

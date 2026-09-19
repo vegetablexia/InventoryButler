@@ -14,7 +14,9 @@ import java.nio.file.Path;
 
 /**
  * 极简 JSON 配置：无需 Cloth Config 之类的依赖，直接读写 config/inventorybutler.json。
- * 改动后需要重启游戏生效（只有客户端会读取它）。
+ *
+ * <p>改动后需要重启游戏生效。双端都会加载：客户端读它决定界面行为，
+ * 服务端读它做权威校验（所以联机时服务器上的这份文件说了算）。</p>
  */
 public final class ModConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();

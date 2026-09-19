@@ -75,9 +75,10 @@ public class InventoryButlerClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(MessagePayload.TYPE, (payload, context) ->
 				context.client().execute(() -> ClientFeedback.showTranslation(payload.key())));
 
-		// 退出时清掉本地副本，免得进了别的存档还挂着上一个存档的幽灵图标
+		// 退出时清掉本地副本，免得进了别的存档还挂着上一个存档的幽灵图标 / 垃圾桶残留
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			ClientPinState.clear();
+			ClientTrashState.clear();
 			CursorIcons.reset();
 			ScreenMessage.clear();
 		});

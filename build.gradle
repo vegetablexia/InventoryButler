@@ -16,7 +16,8 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"inventoryshortcuts" {
+		// 这里的名字必须是 modid（fabric.mod.json 的 "id"），Loom 会用它生成开发环境的运行配置。
+		"inventorybutler" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}

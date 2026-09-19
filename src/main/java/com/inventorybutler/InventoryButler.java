@@ -74,11 +74,23 @@ public class InventoryButler implements ModInitializer {
 			context.server().execute(() -> PlacementHandler.toggle(player, payload));
 		});
 
-		// 进服时把已有的归位标记推给客户端 —— 客户端是只在「收到同步」时才更新的，
-		// 不推的话玩家一进来看到的是一片没有图标的背包。
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-				PlacementHandler.sync(handler.getPlayer()));
+		// 进服时把服务端的权威状态推给客户端 —— 客户端只在「收到同步」时才更新，
+		// 不推的话玩家一进来看到的是一片没有图标的背包，垃圾桶里也还挂着上一局的东西。
+		//
+		// 垃圾桶必须一起推：它只活在服务端内存里、退出时已经清掉了，而客户端那份镜像
+		// 还留着上一个存档的物品图标 —— 不重置就会显示一个「取回」按钮但按了没反应。
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			ServerPlayer player = handler.getPlayer();
+			PlacementHandler.sync(player);
+			TrashHandler.sync(player);
+		});
 
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> TrashHandler.clear(handler.getPlayer()));
+		// 两份数据都只活在服务端内存里，玩家退出即清空
+		// （防止按 UUID 攒着不放，也避免同一玩家重进时看到上一局的残留标记）
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			ServerPlayer player = handler.getPlayer();
+			TrashHandler.clear(player);
+			PlacementHandler.clear(player);
+		});
 	}
 }

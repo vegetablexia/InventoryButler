@@ -17,5 +17,7 @@
 	"inventorybutler.message.favorite.cannotMove": "This item is favorited",
 
 	"inventorybutler.message.pin.on": "Slot pinned",
-	"inventorybutler.message.pin.off": "Slot unpinned"
+	"inventorybutler.message.pin.off": "Slot unpinned",
+
+	"inventorybutler.message.sort.failed": "Sort cancelled: abnormal item stacks"
 }

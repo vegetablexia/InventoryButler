@@ -17,5 +17,7 @@
 	"inventorybutler.message.favorite.cannotMove": "该物品已被收藏",
 
 	"inventorybutler.message.pin.on": "已标记归位位置",
-	"inventorybutler.message.pin.off": "已取消归位标记"
+	"inventorybutler.message.pin.off": "已取消归位标记",
+
+	"inventorybutler.message.sort.failed": "背包状态异常，整理已取消"
 }
