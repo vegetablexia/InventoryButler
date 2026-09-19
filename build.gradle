@@ -47,6 +47,14 @@ tasks.withType(JavaCompile).configureEach {
 java {
 	withSourcesJar()
 
+	// 声明工具链，让 Gradle 自己去找 JDK 25（settings.gradle 里的 foojay 解析器
+	// 负责在找不到时下载）。**没有这一块，foojay 是不生效的** —— 它只在有工具链
+	// 需求时才被触发；缺了它，`options.release = 25` 会直接用运行 Gradle 的那个 JVM，
+	// 于是本机 `java` 是 22 时就报「错误: 不支持发行版本 25」。
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25
 }

@@ -11,7 +11,13 @@ pluginManagement {
 
 plugins {
 	// 让 Gradle 在缺少 JDK 25 时自动下载一个（MC 26.1+ 要求 Java 25）。
-	id 'org.gradle.toolchains.foojay-resolver-convention' version '0.9.0'
+	//
+	// ⚠️ 版本必须 >= 1.0.0：0.9.0 引用了 Gradle 9 已删除的 JvmVendorSpec.IBM_SEMERU，
+	// 一旦 build.gradle 里声明了 toolchain（即解析器真被用到）就会炸：
+	//   Class org.gradle.jvm.toolchain.JvmVendorSpec does not have member field 'IBM_SEMERU'
+	// 1.0.0 的更新说明正是「Removed direct references to deprecated JvmVendorSpec.IBM_SEMERU,
+	// to prepare for Gradle 9 compatibility」。本仓库的 Gradle 是 9.5.1。
+	id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
 // Should match your modid

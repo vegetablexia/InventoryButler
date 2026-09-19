@@ -22,9 +22,9 @@
 | 2 | **垃圾桶** | Ctrl+左键 / Delete / 按钮 | 点一下销毁，再点一下取回 —— 一次撤销，不是二次确认弹窗 |
 | 3 | **收藏锁定** | Alt+左键 | 金色星标跟着物品走：丢不掉、删不掉、整理不动它 |
 | 4 | **归位标记** | T | 给格子定一个「家」：物品离开后半透明占位，回来时优先住回这一格 |
-| 5 | **垃圾桶按钮** | 点绿书右边的按钮 | 贴着原版配方书按钮（绿书）摆放，同尺寸、内凹边框风格 |
+| 5 | **垃圾桶按钮** | 点 GUI 右下角的按钮 | 固定在 GUI 右下角、快捷栏正下方，32×27 的五层内凹包边；手上拿着收藏物时显示危险态 |
 | 6 | **像素指针** | 按住 Alt / Ctrl | 指针变金色星星 / 垃圾桶（16x16 硬边点阵），抬手前就知道点下去是哪种操作 |
-| 7 | **界面内提示** | 自动 | 所有轻提示画在 GUI 顶上方居中（深色底条 + 白字，2.5 秒淡出），界面开着也能看见 |
+| 7 | **界面内提示** | 自动 | 轻提示画在 GUI 顶上方居中（原版底纹 + 渐隐，队列最多 4 条），界面开着也能看见 |
 
 所有按键都能在 `选项 → 控制 → 按键绑定 → 泰拉式物品栏快捷键` 分类里改。
 
@@ -86,22 +86,44 @@
 
 ### 垃圾桶按钮在哪
 
-贴着**原版配方书按钮（绿书）的右边**：绿书在 `(leftPos+104, topPos+…)`，垃圾桶在它右边
-2px、垂直齐平，尺寸同为 **20x18**。边框是手绘的**内凹样式**（上/左缘深色、下/右缘亮色，
-和原版槽位一样「按进去」的观感），悬停时内芯铺一层半透明白高亮。工作台、熔炉等带配方书的
-界面会自动贴在各自绿书右边（位置从原版 `getRecipeBookButtonPosition()` 读取）；
-箱子这类没有绿书的界面回退到 GUI 右缘外侧。
+**固定在 GUI 右下角、快捷栏（最后一行物品栏）的正下方** —— 所有非创造模式的容器界面
+（背包、箱子、漏斗、工作台、熔炉……）共用这一个位置，**不再跟着配方书按钮（绿书）跑**：
+绿书各界面位置不同、配方书展开时还会盖住旁边的东西，而右下角这块空地在任何界面上都是空的。
+
+按钮整体在 GUI 之外，尺寸 **32×27**（含包边），位置只依赖界面矩形：
+
+| 关系 | 取值 | 效果 |
+| --- | --- | --- |
+| 槽芯左缘 | `imageWidth - 24` | 与**快捷栏第 9 格精确同列**（槽芯 `x 152..167` ↔ 快捷栏槽位 `x 152..167`） |
+| 槽芯顶边 | `imageHeight + 1` | 按钮顶边的 3px 垫层接住 GUI 底边框，两块面板灰连成一片 |
+| 按钮右缘 | `imageWidth - 32` | 按钮右侧的「暗灰 2px + 黑 1px」与 GUI 右缘包边**占用同样三列**，竖条纹连续 |
+
+反推得 `buttonX = imageWidth - 32`、`buttonY = imageHeight - 3`。间距随之固定：
+槽位框顶边距快捷栏槽位底边 **8px**、槽芯顶边 9px —— 都与界面尺寸无关（快捷栏恒在 `imageHeight - 24`）。
+
+包边五层，逐层照原版容器 GUI 面板边缘：灰主体 → 投影 2px → 黑描边 1px（**顶部开口**，
+那里是接驳边）→ 内凹斜面 1px → 槽芯 16×16；圆角**底角 2px 阶梯、顶角 r=0**。
+七种颜色里六种取自原版容器贴图。
 
 垃圾桶空着时显示内凹垃圾桶图标（提手 + 盖子 + 透气缝），有东西时直接把那个物品显示出来
-—— 一眼就知道「取回」能拿回什么。
+—— 一眼就知道「取回」能拿回什么。手上拿着**收藏物**时按钮显示**危险态**：槽芯换成
+`#AB7F7F` 加一个深色斜叉，提示「这物品丢不进去」—— 把服务端本来就会拒收的规则提前到悬停阶段，
+不用等点下去才知道。判定条件与服务端 `TrashHandler.rejectIfProtected` **逐字一致**。
 
 ### 界面内提示
 
 所有轻提示**不再走原版动作栏**（动作栏挂在 HUD 上，容器界面打开时根本不渲染）。
 现在分两条路：
 
-- **容器界面开着**：提示画在 GUI 顶上方居中 —— 半透明深色底条 + 白字带阴影，停留 2.5 秒后消失；创造模式界面也画；
+- **容器界面开着**：提示画在 GUI 顶上方居中 —— **原版底纹**（底色取自
+  `options.getBackgroundColor(0F)`，和原版 tooltip 同源）+ 带投影的白字，
+  **渐隐**：淡入 150ms → 停留 2200ms → 淡出 400ms（`textWithBackdrop` 内部 alpha 写死，
+  做不了渐隐，所以这一步是手写的 `fill` + `text`）；创造模式界面也画；
 - **界面外**（如走路时按 Q）：照旧走原版动作栏。
+
+提示**队列化**：一次只显示一条，期间来的提示排队等着（最多积压 4 条，超出丢最旧的，
+宁可丢提示也不让队列无限变长）；**同一条**重复触发只刷新它的计时，不重复排队 ——
+连按 Ctrl+左键拦收藏物时不会刷屏。
 
 当前提示文案（中英双语齐全，改文案直接编辑 lang 文件）：
 
@@ -115,8 +137,9 @@
 | `message.pin.on` | 已标记归位位置 | T 打标记 |
 | `message.pin.off` | 已取消归位标记 | T 取消 |
 | `message.sort.failed` | 背包状态异常，整理已取消 | 整理时容量预检不通过（极罕见，见下） |
-| `tooltip.trash.empty` | 垃圾桶是空的 | 悬停垃圾桶按钮 |
-| `tooltip.trash.reclaim` | 点击取回 | 垃圾桶有东西时悬停 |
+| `tooltip.trash.empty` | 垃圾桶是空的 | 悬停垃圾桶按钮，且桶是空的 |
+| `tooltip.trash.reclaim` | 点击取回 | 悬停垃圾桶按钮，且桶里有东西 |
+| `tooltip.trash.blocked` | 该物品已被收藏，丢不进垃圾桶 | 悬停垃圾桶按钮，且光标上拿着收藏物（危险态） |
 
 ### 鼠标指针图标
 
@@ -207,13 +230,44 @@
 
 ## 六、构建
 
-需要 JDK 25（Minecraft 26.1 起要求 Java 25）。没有的话 `settings.gradle` 里的
-foojay 解析器会自动下载。
+需要 JDK 25（Minecraft 26.1 起要求 Java 25）。`build.gradle` 里声明了工具链，
+所以**正常不用手动设 `JAVA_HOME`**：
+
+```gradle
+java {
+	toolchain { languageVersion = JavaLanguageVersion.of(25) }
+}
+```
 
 ```bash
 ./gradlew build        # 产物在 build/libs/inventorybutler-1.0.2.jar
 ./gradlew runClient    # 开发环境启动游戏
 ```
+
+### 工具链排查：报「找不到 Java 25」时
+
+先跑 `./gradlew -q javaToolchains` —— 它会列出 Gradle **实际认到的所有 JDK 及检测来源**。
+两个已知原因：
+
+**① Windows 上 Gradle 不扫描 `C:\Program Files\Java`。** 它只看注册表
+`HKLM\SOFTWARE\JavaSoft\JDK` 和当前 JVM（`javaToolchains` 会标注 `Detected by: Windows Registry`）。
+免安装解压的 JDK —— GraalVM 这类 —— 不会往注册表写条目，于是检测不到。
+在**用户级** `~/.gradle/gradle.properties` 里显式列出路径即可（别写进工程的
+`gradle.properties`：那是机器相关配置，会污染仓库且对别人无效）：
+
+```properties
+org.gradle.java.installations.paths=C:/Program Files/Java/graalvm-jdk-25.0.2+10.1
+```
+
+**② foojay 自动下载可能失败。** 它先向 `api.foojay.io` 问地址，再发 **HEAD** 到
+`github.com/adoptium/...`。若本机走代理且代理拦 HEAD，会报
+`Could not HEAD 'https://github.com/adoptium/temurin25-binaries/releases/download/...'`。
+这种情况下自动下载指望不上，只能靠 ① 的本地路径。
+
+> ⚠️ `settings.gradle` 里 foojay 解析器的版本必须 **>= 1.0.0**。0.9.0 引用了 Gradle 9
+> 已删除的 `JvmVendorSpec.IBM_SEMERU`，一旦工具链真的被解析就会炸：
+> `Class org.gradle.jvm.toolchain.JvmVendorSpec does not have member field 'IBM_SEMERU'`
+> （0.9.0 在「没有 toolchain 声明」时看不出问题 —— 解析器根本不会被触发。本项目踩过这个坑。）
 
 ### 提交前先跑一遍 Mixin 静态自检
 
@@ -271,10 +325,9 @@ src/main/java/com/inventorybutler/
 src/client/java/com/inventorybutler/client/
 ├── InventoryButlerClient.java    客户端入口：按键绑定、收包、断线清理
 ├── ClientFeedback.java              提示分流：容器界面内 → ScreenMessage；界面外 → 动作栏
-├── ScreenMessage.java               界面内轻提示状态（2.5s）
+├── ScreenMessage.java               界面内轻提示：队列（最多积压 4 条）+ 渐隐，一次显示一条
 ├── mixin/
 │   ├── AbstractContainerScreenMixin.java  鼠标/键盘事件、按钮命中、提示与按钮绘制、指针上报
-│   ├── AbstractRecipeBookScreenAccessor.java  借调原版绿书按钮位置（@Invoker）
 │   ├── LocalPlayerDropMixin.java    客户端：拦收藏物丢弃（界面关着那条路）
 │   ├── GuiGraphicsExtractorMixin.java    applyCursor TAIL 换指针图标
 │   └── CursorTypeInvoker.java       借 CursorType 私有构造器（图片光标）
@@ -311,8 +364,7 @@ tools/
 | `ClientPlayNetworking` | 挪到 `api.client.networking.v1` |
 | 换鼠标指针 | 官方通道：`Gui` 每帧末调 `applyCursor(window)` → `Window.selectCursor(CursorType)`，按引用去重。**注入 `applyCursor` TAIL 直接调 `selectCursor`**，恢复由原版自动完成 |
 | 图片鼠标指针 | `CursorType` 私有构造器 `CursorType(String, long)`（第二参 = GLFW 句柄），构造器型 `@Invoker("<init>")` 借出；句柄来自 `GLFW.glfwCreateCursor` |
-| 配方书按钮位置 | `AbstractRecipeBookScreen.getRecipeBookButtonPosition()`（protected，返回**绝对屏幕坐标**）；按钮精灵 `RecipeBookComponent.RECIPE_BUTTON_SPRITES.get(enabled, hovered)`，尺寸 20x18 |
-| 玩家背包里的绿书 | `(leftPos+104, topPos + h/2 - 22)`；工作台 `(leftPos+5, h/2-49)`；熔炉 `(leftPos+20, h/2-49)` |
+| 配方书按钮（**本项目已不用**，仅备查） | `AbstractRecipeBookScreen.getRecipeBookButtonPosition()`（protected，返回**绝对屏幕坐标**）；按钮精灵 `RecipeBookComponent.RECIPE_BUTTON_SPRITES.get(enabled, hovered)`，尺寸 20x18；位置 背包 `(leftPos+104, topPos + h/2 - 22)`、工作台 `(leftPos+5, h/2-49)`、熔炉 `(leftPos+20, h/2-49)`。垃圾桶按钮早期依赖它，现已改锚 GUI 右下角，`AbstractRecipeBookScreenAccessor` 已删除 |
 
 **坐标系约定**：`extractSlots` 里 `slot.x`/`slot.y` 已是 GUI 局部坐标（调用前已
 `translate(leftPos, topPos)`）；点击判定用原版 `isHovering`（内部自己加 `leftPos/topPos`）。
