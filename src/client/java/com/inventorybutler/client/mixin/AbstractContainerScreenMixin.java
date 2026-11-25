@@ -511,11 +511,14 @@ public abstract class AbstractContainerScreenMixin {
 	 * 包装槽（InventoryMenu 下标 36-44）判成 -1。这里按创造模式的两种页签分开换算：</p>
 	 *
 	 * <ul>
+	 *   <li><b>「物品栏」页</b>：包装槽是直接 {@code menu.slots.add(...)} 塞进去的，
+	 *       没走 {@code addSlot}，所以 {@code slot.index} 恒为 0；真正可靠的是
+	 *       {@code getContainerSlot()}（构造时填入的 InventoryMenu 下标）。
+	 *       0-4 合成、5-8 护甲、45 副手都不是归位对象；9-35 是主背包，
+	 *       36-44 是快捷栏（减 36 得到背包 0-8）；</li>
 	 *   <li><b>物品选择页</b>：0-44 是物品种类（容器不是 {@link Inventory}，自然排除），
-	 *       45-53 是普通 {@code Slot}，{@code containerSlot} 就是背包 0-8；</li>
-	 *   <li><b>「物品栏」页</b>：0-4 合成、5-8 护甲、45 副手都不是归位对象；
-	 *       9-35 是主背包，36-44 是快捷栏。包装槽的 {@code slot.index} 正好等于
-	 *       InventoryMenu 下标，所以 9-35 原样用、36-44 减 36。</li>
+	 *       45-53 是普通 {@code Slot}（走过 {@code addSlot}，index 45-53），
+	 *       {@code containerSlot} 就是背包 0-8。</li>
 	 * </ul>
 	 */
 	private int inventoryHome(Slot slot) {
@@ -525,21 +528,23 @@ public abstract class AbstractContainerScreenMixin {
 		if (slot == null || slot.isFake() || !(slot.container instanceof Inventory)) {
 			return -1;
 		}
-		int index = slot.index;
-		if (index >= 9 && index <= 35) {
-			// 「物品栏」页的主背包包装槽
-			return index;
+		int containerSlot = slot.getContainerSlot();
+		// 「物品栏」页的包装槽：containerSlot 是 InventoryMenu 下标 9-44。
+		if (containerSlot >= 9 && containerSlot <= 35) {
+			// 主背包
+			return containerSlot;
 		}
-		if (index >= 36 && index <= 44) {
-			// 「物品栏」页的快捷栏包装槽
-			return index - 36;
+		if (containerSlot >= 36 && containerSlot <= 44) {
+			// 快捷栏
+			return containerSlot - 36;
 		}
-		if (index >= 45 && index <= 53) {
-			// 物品选择页底部的快捷栏是普通 Slot；「物品栏」页 45 是副手（containerSlot=45）
-			int home = slot.getContainerSlot();
-			return home >= 0 && home <= SlotRules.HOTBAR_LAST ? home : -1;
+		// 物品选择页底部的快捷栏是普通 Slot：index 45-53、containerSlot 0-8。
+		// 「物品栏」页的护甲包装槽 containerSlot 5-8 但 index 为 0，会被这里排除。
+		if (slot.index >= 45 && slot.index <= 53
+				&& containerSlot >= 0 && containerSlot <= SlotRules.HOTBAR_LAST) {
+			return containerSlot;
 		}
-		// 0-4 合成格、5-8 护甲、以及创造模式之外的杂项
+		// 0-4 合成格、5-8 护甲、45 副手、以及不是背包的槽位
 		return -1;
 	}
 
