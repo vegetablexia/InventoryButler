@@ -8,7 +8,7 @@ import java.util.Queue;
 /**
  * 「物品栏界面内的提示」—— 在容器界面上方居中显示的一条轻提示。
  *
- * <p>背景：本 mod 的提示几乎全都是在<b>物品栏界面里</b>触发的（收藏、归位、垃圾桶、
+ * <p>背景：本 mod 的提示几乎全都是在<b>物品栏界面里</b>触发的（收藏、归位、
  * 快捷移动被拦），但原版的动作栏提示挂在 HUD 上 —— <b>容器界面打开时 HUD 不渲染</b>，
  * 玩家根本看不见。所以提示改在这里暂存，由
  * {@code AbstractContainerScreenMixin} 在每帧绘制容器界面时画在 GUI 顶上方。</p>
@@ -74,21 +74,15 @@ public final class ScreenMessage {
 	 */
 	public static Component current() {
 		long now = System.currentTimeMillis();
-		if (key == null) {
-			pullNext(now);
-			// 新拉出来的这条从淡入的 0 开始
-			lastFade = key == null ? 0f : fadeAt(now - shownAt);
-			return key == null ? null : Component.translatable(key);
-		}
-		long elapsed = now - shownAt;
-		if (elapsed >= TOTAL_MS) {
+		if (key != null && now - shownAt >= TOTAL_MS) {
 			key = null;
-			pullNext(now);
-			lastFade = key == null ? 0f : fadeAt(now - shownAt);
-			return key == null ? null : Component.translatable(key);
 		}
-		lastFade = fadeAt(elapsed);
-		return Component.translatable(key);
+		if (key == null) {
+			// 队列里拉出来的下一条：从淡入的 0 开始（fadeAt(0) == 0）
+			pullNext(now);
+		}
+		lastFade = key == null ? 0f : fadeAt(now - shownAt);
+		return key == null ? null : Component.translatable(key);
 	}
 
 	/** 本帧的淡入淡出系数：淡入段线性升到 1，停留段为 1，淡出段线性降到 0。 */

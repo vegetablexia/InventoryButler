@@ -30,6 +30,10 @@ public final class FavoriteHandler {
 			return;
 		}
 		Slot slot = menu.getSlot(slotId);
+		// 护甲/背包等真实槽位可以收藏；模组用来做展示的假槽不碰
+		if (!slot.isActive() || slot.isFake()) {
+			return;
+		}
 		ItemStack stack = slot.getItem();
 		if (stack.isEmpty()) {
 			return;

@@ -9,8 +9,8 @@ import java.util.Map;
 /**
  * 客户端持有的「归位标记」副本。
  *
- * <p>和服务端的垃圾桶一样：服务端才是权威，这里只是拿一份用来画界面的镜像。
- * 客户端拿着它不做任何判断，也就不会出现「客户端以为自己标上了、服务端其实没标」的情况。</p>
+ * <p>服务端才是权威，这里主要是用来画界面的镜像；客户端对 Shift 快移的提前预测也会
+ * 通过 {@link #snapshot()} 读取它来决定落位，但最终状态仍以服务端同步为准。</p>
  *
  * <p>读写都发生在客户端主线程上（收包走 {@code context.client().execute(...)}，
  * 渲染走渲染线程那条主线程），所以用普通 {@link HashMap} 就够了。</p>
@@ -37,6 +37,16 @@ public final class ClientPinState {
 	/** 这个背包下标预留给了什么物品；没有标记就返回空栈。 */
 	public static ItemStack at(int inventoryIndex) {
 		return PINS.getOrDefault(inventoryIndex, ItemStack.EMPTY);
+	}
+
+	/**
+	 * 供客户端预测读取的只读快照。拷贝一份，避免预测逻辑遍历时正好有同步包替换了表。
+	 * 数量恒为 1，调用方只该用它比对物品类型。
+	 */
+	public static Map<Integer, ItemStack> snapshot() {
+		Map<Integer, ItemStack> copy = new HashMap<>(PINS.size());
+		PINS.forEach((home, stack) -> copy.put(home, stack.copy()));
+		return copy;
 	}
 
 	public static void clear() {

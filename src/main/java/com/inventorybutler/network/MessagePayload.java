@@ -5,7 +5,6 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 
 /**
  * 服务端 -&gt; 客户端：一条轻提示（翻译键）。
@@ -20,7 +19,7 @@ import net.minecraft.resources.Identifier;
  */
 public record MessagePayload(String key) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<MessagePayload> TYPE =
-			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "message"));
+			new CustomPacketPayload.Type<>(InventoryButler.id("message"));
 
 	public static final StreamCodec<RegistryFriendlyByteBuf, MessagePayload> STREAM_CODEC =
 			StreamCodec.composite(ByteBufCodecs.STRING_UTF8, MessagePayload::key, MessagePayload::new);

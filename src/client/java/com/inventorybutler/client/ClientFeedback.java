@@ -37,14 +37,14 @@ public final class ClientFeedback {
 		show("inventorybutler.message.favorite.cannotDrop");
 	}
 
-	/** 「收藏了，搬不走」—— Shift 快捷移动进容器被拦下时提示。 */
-	public static void cannotMoveFavorite() {
-		show("inventorybutler.message.favorite.cannotMove");
-	}
-
 	/** 服务端发来的提示（{@link com.inventorybutler.network.MessagePayload}）直接按翻译键展示。 */
 	public static void showTranslation(String translationKey) {
 		show(translationKey);
+	}
+
+	/** 断开连接时清空节流记录，避免把上一个存档的时间戳带过去。 */
+	public static void clear() {
+		LAST_SHOWN_AT.clear();
 	}
 
 	private static void show(String translationKey) {
@@ -55,16 +55,22 @@ public final class ClientFeedback {
 		}
 		LAST_SHOWN_AT.put(translationKey, now);
 
-		// 先记进界面层：如果此刻正开着容器界面，mixin 下一帧就会把它画在 GUI 上方
-		ScreenMessage.show(translationKey);
-
 		Minecraft mc = Minecraft.getInstance();
-		if (mc == null || mc.gui == null || mc.gui.hud == null) {
+		// 注意 26.x 把「当前界面」从 Minecraft.screen 挪到了 Gui.screen()。
+		boolean inContainerScreen = mc != null && mc.gui != null
+				&& mc.gui.screen() instanceof AbstractContainerScreen;
+
+		if (inContainerScreen) {
+			// 界面层：mixin 下一帧画在 GUI 顶上方。
+			// 这里必须二选一，不能「界面层也记一份、动作栏也发一份」：
+			// 界面外的消息如果进了队列，会一直留到下次打开容器界面才显示 —— 变成一条迟到的幽灵提示。
+			ScreenMessage.show(translationKey);
 			return;
 		}
-		// 容器界面开着的时候动作栏反正看不见，别白发。
-		// 注意 26.x 把「当前界面」从 Minecraft.screen 挪到了 Gui.screen()。
-		if (mc.gui.screen() instanceof AbstractContainerScreen) {
+
+		// 界面外：动作栏。顺手清掉界面层的积压（多半是刚关掉的界面里留下的）。
+		ScreenMessage.clear();
+		if (mc == null || mc.gui == null || mc.gui.hud == null) {
 			return;
 		}
 		// 26.x：actionbar 文本从 Gui 挪到了 Gui.hud（Hud#setOverlayMessage）

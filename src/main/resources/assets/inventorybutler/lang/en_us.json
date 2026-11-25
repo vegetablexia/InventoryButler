@@ -2,23 +2,22 @@
 	"key.category.inventorybutler.main": "Inventory Butler",
 
 	"key.inventorybutler.sort": "Sort inventory",
-	"key.inventorybutler.sort.alt": "Sort inventory (secondary key)",
-	"key.inventorybutler.trash": "Move hovered stack to trash",
 	"key.inventorybutler.favorite": "Toggle favorite on hovered stack",
-	"key.inventorybutler.pin": "Pin / unpin this slot for an item",
 
-	"inventorybutler.tooltip.trash.empty": "Trash is empty",
-	"inventorybutler.tooltip.trash.reclaim": "Click to take back",
-	"inventorybutler.tooltip.trash.blocked": "Favorited: cannot be trashed",
+	"inventorybutler.command.sortmode.current": "Container sorting mode: %s",
+	"inventorybutler.command.sortmode.set": "Container sorting mode set to: %s",
+	"inventorybutler.command.players_only": "Only a player can change the container sorting mode",
+	"inventorybutler.sortmode.category": "Category sort (classic)",
+	"inventorybutler.sortmode.topmost": "In-place stacking",
 
 	"inventorybutler.message.favorite.on": "Favorited",
 	"inventorybutler.message.favorite.off": "Unfavorited",
-	"inventorybutler.message.favorite.protected": "This item is favorited",
 	"inventorybutler.message.favorite.cannotDrop": "This item is favorited",
 	"inventorybutler.message.favorite.cannotMove": "This item is favorited",
 
 	"inventorybutler.message.pin.on": "Slot pinned",
 	"inventorybutler.message.pin.off": "Slot unpinned",
 
+	"inventorybutler.message.server.missing": "Inventory Butler is not installed on this server",
 	"inventorybutler.message.sort.failed": "Sort cancelled: abnormal item stacks"
 }

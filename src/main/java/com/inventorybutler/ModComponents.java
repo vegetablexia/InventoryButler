@@ -28,4 +28,14 @@ public final class ModComponents {
 
 	private ModComponents() {
 	}
+
+	/**
+	 * 确保本类完成静态初始化（数据组件在这一步注册）。
+	 *
+	 * <p>以前入口里写的是 {@code ModComponents.FAVORITE.getClass()}，也能触发类初始化，
+	 * 但读起来像在「用」字段而不是「注册」组件。留一个明确的入口方法。</p>
+	 */
+	public static void init() {
+		// 空方法体：调用即为目的
+	}
 }

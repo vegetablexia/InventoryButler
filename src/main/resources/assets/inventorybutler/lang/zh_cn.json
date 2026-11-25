@@ -1,24 +1,23 @@
 {
-	"key.category.inventorybutler.main": "泰拉式物品栏快捷键",
+	"key.category.inventorybutler.main": "物品管家",
 
 	"key.inventorybutler.sort": "一键整理物品栏",
-	"key.inventorybutler.sort.alt": "一键整理物品栏（备用键）",
-	"key.inventorybutler.trash": "把指向的物品丢进垃圾桶",
 	"key.inventorybutler.favorite": "收藏/取消收藏指向的物品",
-	"key.inventorybutler.pin": "标记/取消归位位置（这一格留给这个物品）",
 
-	"inventorybutler.tooltip.trash.empty": "垃圾桶是空的",
-	"inventorybutler.tooltip.trash.reclaim": "点击取回",
-	"inventorybutler.tooltip.trash.blocked": "该物品已被收藏，丢不进垃圾桶",
+	"inventorybutler.command.sortmode.current": "容器整理模式：%s",
+	"inventorybutler.command.sortmode.set": "容器整理模式已切换为：%s",
+	"inventorybutler.command.players_only": "只有玩家可以切换容器整理模式",
+	"inventorybutler.sortmode.category": "分类整理（旧版）",
+	"inventorybutler.sortmode.topmost": "原位堆叠",
 
 	"inventorybutler.message.favorite.on": "已收藏",
 	"inventorybutler.message.favorite.off": "已取消收藏",
-	"inventorybutler.message.favorite.protected": "该物品已被收藏",
 	"inventorybutler.message.favorite.cannotDrop": "该物品已被收藏",
 	"inventorybutler.message.favorite.cannotMove": "该物品已被收藏",
 
 	"inventorybutler.message.pin.on": "已标记归位位置",
 	"inventorybutler.message.pin.off": "已取消归位标记",
 
+	"inventorybutler.message.server.missing": "服务器未安装物品管家，此操作不可用",
 	"inventorybutler.message.sort.failed": "背包状态异常，整理已取消"
 }

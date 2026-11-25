@@ -5,7 +5,6 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 
 /**
  * 客户端 -&gt; 服务端：切换某个槽位的「归位标记」。
@@ -15,7 +14,7 @@ import net.minecraft.resources.Identifier;
  */
 public record PinPayload(int containerId, int slotId) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<PinPayload> TYPE =
-			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "pin"));
+			new CustomPacketPayload.Type<>(InventoryButler.id("pin"));
 
 	public static final StreamCodec<RegistryFriendlyByteBuf, PinPayload> STREAM_CODEC =
 			StreamCodec.composite(

@@ -1,10 +1,10 @@
 package com.inventorybutler.network;
 
 import com.inventorybutler.InventoryButler;
+import com.inventorybutler.SlotRules;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ import java.util.List;
  */
 public record PinSyncPayload(List<Integer> slots, List<ItemStack> items) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<PinSyncPayload> TYPE =
-			new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "pin_sync"));
+			new CustomPacketPayload.Type<>(InventoryButler.id("pin_sync"));
 
 	/**
 	 * 手写 codec 而不是 {@code StreamCodec.composite}：这是两个需要保持等长的 list
@@ -41,6 +41,11 @@ public record PinSyncPayload(List<Integer> slots, List<ItemStack> items) impleme
 
 	private static PinSyncPayload read(RegistryFriendlyByteBuf buf) {
 		int size = buf.readVarInt();
+		// 归位标记只可能落在玩家背包的 36 格上；超出说明对面发的东西不对，
+		// 与其照单全收分配内存，不如让这次解码失败（连接会被协议层断开）。
+		if (size < 0 || size > SlotRules.INVENTORY_SLOTS) {
+			throw new IllegalArgumentException("归位同步包长度越界: " + size);
+		}
 		List<Integer> slots = new ArrayList<>(size);
 		List<ItemStack> items = new ArrayList<>(size);
 		for (int i = 0; i < size; i++) {

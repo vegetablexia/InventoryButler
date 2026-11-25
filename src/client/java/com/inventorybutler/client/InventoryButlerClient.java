@@ -1,9 +1,9 @@
 package com.inventorybutler.client;
 
 import com.inventorybutler.InventoryButler;
+import com.inventorybutler.PinAccess;
 import com.inventorybutler.network.MessagePayload;
 import com.inventorybutler.network.PinSyncPayload;
-import com.inventorybutler.network.TrashSyncPayload;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -16,8 +16,8 @@ import org.lwjgl.glfw.GLFW;
 /**
  * 客户端入口。
  *
- * <p>这里只做三件事：注册按键、注册收包、把服务端的两份权威数据（垃圾桶内容、
- * 归位标记）镜像到本地供绘制使用。真正的逻辑全部在 {@code AbstractContainerScreenMixin}
+ * <p>这里只做三件事：注册按键、注册收包、把服务端的权威数据（归位标记）
+ * 镜像到本地供绘制使用。真正的逻辑全部在 {@code AbstractContainerScreenMixin}
  * 里（因为它需要槽位信息），以及服务端的几个 Handler 里。</p>
  */
 public class InventoryButlerClient implements ClientModInitializer {
@@ -33,10 +33,7 @@ public class InventoryButlerClient implements ClientModInitializer {
 					Identifier.fromNamespaceAndPath(InventoryButler.MOD_ID, "main"));
 
 	private static KeyMapping sortKey;
-	private static KeyMapping sortAltKey;
-	private static KeyMapping trashKey;
 	private static KeyMapping favoriteKey;
-	private static KeyMapping pinKey;
 
 	@Override
 	public void onInitializeClient() {
@@ -49,38 +46,29 @@ public class InventoryButlerClient implements ClientModInitializer {
 		sortKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.inventorybutler.sort",
 				InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_MIDDLE, CATEGORY));
-		// 老玩家习惯的 R 键继续保留，作为整理的第二绑定。
-		sortAltKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.inventorybutler.sort.alt",
-				InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY));
-		trashKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.inventorybutler.trash",
-				InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_DELETE, CATEGORY));
+		// 收藏默认不绑键盘键：Alt+左键是主操作，这里只留一个可选的键盘替代键。
 		favoriteKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.inventorybutler.favorite",
 				InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, CATEGORY));
-		// 「归位标记」默认 T：原版物品栏界面没占用 T，不会和别的功能打架。
-		pinKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.inventorybutler.pin",
-				InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_T, CATEGORY));
 
-		// 服务端是垃圾桶 / 归位标记的权威，客户端只是拿一份副本用于渲染。
-		ClientPlayNetworking.registerGlobalReceiver(TrashSyncPayload.TYPE, (payload, context) ->
-				context.client().execute(() -> ClientTrashState.set(payload.stack())));
-
+		// 服务端是归位标记的权威，客户端只是拿一份副本用于渲染。
 		ClientPlayNetworking.registerGlobalReceiver(PinSyncPayload.TYPE, (payload, context) ->
 				context.client().execute(() -> ClientPinState.set(payload.slots(), payload.items())));
+
+		// 客户端预测（Shift 快移）也要知道归位格，否则物品会先预测落在默认格、
+		// 等服务端纠正时闪一下。
+		PinAccess.setClientPins(ClientPinState::snapshot);
 
 		// 服务端发来的轻提示：显示层级由 ClientFeedback 分流（界面内画在 GUI 上方，界面外走动作栏）
 		ClientPlayNetworking.registerGlobalReceiver(MessagePayload.TYPE, (payload, context) ->
 				context.client().execute(() -> ClientFeedback.showTranslation(payload.key())));
 
-		// 退出时清掉本地副本，免得进了别的存档还挂着上一个存档的幽灵图标 / 垃圾桶残留
+		// 退出时清掉本地副本，免得进了别的存档还挂着上一个存档的幽灵图标
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			ClientPinState.clear();
-			ClientTrashState.clear();
 			CursorIcons.reset();
 			ScreenMessage.clear();
+			ClientFeedback.clear();
 		});
 
 		InventoryButler.LOGGER.info("Inventory Butler 客户端已就绪");
@@ -90,19 +78,7 @@ public class InventoryButlerClient implements ClientModInitializer {
 		return sortKey;
 	}
 
-	public static KeyMapping sortAltKey() {
-		return sortAltKey;
-	}
-
-	public static KeyMapping trashKey() {
-		return trashKey;
-	}
-
 	public static KeyMapping favoriteKey() {
 		return favoriteKey;
-	}
-
-	public static KeyMapping pinKey() {
-		return pinKey;
 	}
 }

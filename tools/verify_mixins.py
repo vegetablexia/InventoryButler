@@ -28,11 +28,18 @@ Mixin 静态自检 —— 在启动游戏之前，把「编译能过、一启动
 
 import argparse
 import glob
+import shutil
 import json
 import os
 import re
 import subprocess
 import sys
+
+# Windows 的控制台默认按 GBK 输出；脚本里有中文和 ✅/❌，重定向到管道时会抛
+# UnicodeEncodeError。统一改成 UTF-8 输出（不影响 --jar 等参数的处理）。
+for stream in (sys.stdout, sys.stderr):
+    if hasattr(stream, "reconfigure"):
+        stream.reconfigure(encoding="utf-8", errors="replace")
 
 SRC_ROOTS = [
     "src/main/java",
@@ -98,7 +105,27 @@ METHOD_DECL_RE = re.compile(
 
 
 def run(cmd):
-    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except OSError as exc:
+        print(f"❌ 无法运行 {cmd[0]}：{exc}")
+        raise SystemExit(2)
+
+
+def resolve_javap(explicit):
+    """确定 javap：命令行 > PATH > JAVA_HOME/bin。找不到返回 None。"""
+    if explicit:
+        return explicit
+    found = shutil.which("javap")
+    if found:
+        return found
+    java_home = os.environ.get("JAVA_HOME", "")
+    if java_home:
+        for name in ("javap.exe", "javap"):
+            cand = os.path.join(java_home, "bin", name)
+            if os.path.isfile(cand):
+                return cand
+    return None
 
 
 class JavaTypes:
@@ -385,21 +412,17 @@ def main():
     # 一律以工程根目录为准，脚本从哪儿调用都行
     os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-    javap = args.javap
+    javap = resolve_javap(args.javap)
     if not javap:
-        java_home = os.environ.get("JAVA_HOME", "")
-        cand = os.path.join(java_home, "bin", "javap.exe")
-        if java_home and os.path.isfile(cand):
-            javap = cand
-        else:
-            cand = os.path.join(java_home, "bin", "javap")
-            javap = cand if java_home and os.path.isfile(cand) else "javap"
+        print("找不到 javap：请把 JDK 的 bin 加进 PATH，用 JAVA_HOME 指向 JDK，"
+              "或用 --javap 指定完整路径")
+        return 2
 
     jars = args.jar or find_default_jars()
     if not jars:
         print("找不到 MC jar，请用 --jar 指定（默认从本目录向上找 .tools/mc/client-26.2.jar）")
         return 1
-    classpath = ";".join(os.path.abspath(j) for j in jars)
+    classpath = os.pathsep.join(os.path.abspath(j) for j in jars)
 
     print(f"javap : {javap}")
     print(f"jar   : {', '.join(jars)}")

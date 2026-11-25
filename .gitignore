@@ -40,6 +40,10 @@ backups/
 
 ui_preview.svg
 
+# 本地图标 / 界面设计稿（不进仓库）
+
+icon-preview/
+
 # java
 
 hs_err_*.log

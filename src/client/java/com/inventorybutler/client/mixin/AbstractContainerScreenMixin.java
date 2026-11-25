@@ -4,21 +4,21 @@ import com.inventorybutler.FavoriteStacks;
 import com.inventorybutler.ModConfig;
 import com.inventorybutler.client.ClientFeedback;
 import com.inventorybutler.client.ClientPinState;
-import com.inventorybutler.client.ClientTrashState;
 import com.inventorybutler.client.CursorIcons;
+import com.inventorybutler.SlotRules;
 import com.inventorybutler.client.InventoryOverlay;
 import com.inventorybutler.client.InventoryButlerClient;
 import com.inventorybutler.client.ScreenMessage;
-import com.inventorybutler.client.SlotSections;
 import com.inventorybutler.network.FavoriteTogglePayload;
 import com.inventorybutler.network.PinPayload;
 import com.inventorybutler.network.SortPayload;
-import com.inventorybutler.network.TrashPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.input.KeyEvent;
@@ -31,7 +31,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -52,23 +51,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  *
  * <p><b>操作表</b>（这里不再做任何鼠标拖拽 / 滚轮手势，那部分功能已移除）：</p>
  * <ul>
- *   <li><b>点垃圾桶按钮</b>：GUI 右下角、快捷栏末格正下方那块 32x27 的「口袋」，
- *       内凹槽位风格的边框；手上拿着收藏物时显示危险态（红灰槽芯 + 深色叉），
- *       并和取回 / 丢弃一样由服务端拒收</li>
- *   <li><b>鼠标中键</b> / <b>R</b>（可改绑）：一键整理（只整理主背包，快捷栏不动），不弹提示</li>
- *   <li><b>Shift + 点击</b>：背包里的收藏物<b>不能</b>被快捷移动进容器（服务端同样拦截；
- *       从容器往背包搬不受限）</li>
- *   <li><b>T</b>（可改绑）：给指向的这一格打「归位标记」—— 这一格以后就留给这个物品，
+ *   <li><b>鼠标中键</b>（可在按键设置里改绑）：一键整理（主背包 + 打开的储存容器；
+ *       快捷栏默认不动），成功时不弹提示；服务端没装本 mod 时会说明一句</li>
+ *   <li><b>Shift + 点击</b>：收藏物<b>不能</b>被快捷移动进容器（服务端同样拦截；
+ *       从容器往背包搬、以及背包内部的换格不受限）</li>
+ *   <li><b>Alt + 右键</b>：给指向的这一格打 / 取消「归位标记」—— 这一格以后就留给这个物品，
  *       物品不在这儿时格子显示半透明图标占位</li>
- *   <li>Alt + 左键：收藏 / 取消收藏</li>
- *   <li>Ctrl + 左键：把这一格丢进垃圾桶</li>
- *   <li>Delete（可改绑）：把鼠标指向的那格丢进垃圾桶</li>
- *   <li>按住 Alt / Ctrl 时鼠标指针会变成<b>星星 / 垃圾桶</b>（指针指着能生效的槽位才变，
+ *   <li><b>Alt + 左键</b>：收藏 / 取消收藏</li>
+ *   <li>按住 Alt 时鼠标指针会变成<b>星星</b>（指针指着能生效的槽位才变，
  *       实现在 {@code CursorIcons}）</li>
+ *   <li><b>文本框有焦点时</b>（铁砧改名、创造模式搜索框……）键盘热键一律让路，
+ *       字母键和 Delete 仍然归输入框</li>
  * </ul>
  *
- * <p><b>两种标记的区别</b>：收藏（金星星标）管「不许动」，归位（半透明图标）管「放哪儿」。
- * 前者防丢防删防整理，后者只管物品回家时优先住回自己那一格。两者可以同时用。</p>
+ * <p><b>两种标记的区别</b>：收藏（金色边标）管「不许动」，归位（半透明图标）管「放哪儿」。
+ * 前者防丢防整理，后者只管物品回家时优先住回自己那一格。两者可以同时用。</p>
  */
 @Mixin(AbstractContainerScreen.class)
 public abstract class AbstractContainerScreenMixin {
@@ -84,18 +81,18 @@ public abstract class AbstractContainerScreenMixin {
 	@Shadow
 	protected int imageHeight;
 
+	/**
+	 * 原版正在进行的「拖拽分堆」。
+	 *
+	 * <p>拖拽期间左/右键被原版用来决定分堆目标，鼠标中键如果这时被我们拿去整理，
+	 * 松手时那套按旧槽位记录的分堆集合就可能落到已经变了的格子上。为了不碰这种
+	 * 半途状态，拖拽中一律不接管任何点击。</p>
+	 */
+	@Shadow
+	private boolean isQuickCrafting;
+
 	@Shadow
 	protected abstract boolean isHovering(int x, int y, int width, int height, double mouseX, double mouseY);
-
-	/**
-	 * 本次「按下 - 松开」里，鼠标是不是按在垃圾桶按钮上。
-	 *
-	 * <p>这个状态必须自己记：按钮画在 GUI 的空地上（或外侧），原版不会替它处理点击；
-	 * 尤其松手落在 GUI 外时，{@code hasClickedOutside} 分支会把光标上拿着的物品
-	 * 直接丢到地上。按下时拦掉还不够，得让对应的那次松开也一起被吞掉。</p>
-	 */
-	@Unique
-	private boolean inventorybutler$customButtonPressed;
 
 	// ------------------------------------------------------------------
 	// 鼠标
@@ -106,51 +103,36 @@ public abstract class AbstractContainerScreenMixin {
 	private void inventorybutler$onMouseClicked(MouseButtonEvent event, boolean doubleClick,
 			CallbackInfoReturnable<Boolean> cir) {
 		AbstractContainerMenu menu = this.menu;
-		if (menu == null) {
+		if (menu == null || this.isQuickCrafting) {
 			return;
 		}
 
-		// 每次按下都从「没按在按钮上」重新开始判断。
-		//
-		// 不重置的话，万一上一次点击的 mouseReleased 被别的 mod 吞掉了（没轮到我们），
-		// 这个标志就会一直挂着 true，之后某次普通松手会被莫名其妙地吞掉一次。
-		// 重置是无害的：同一次点击里 mouseClicked 一定先于 mouseReleased 执行。
-		inventorybutler$customButtonPressed = false;
+		boolean creative = screen() instanceof CreativeModeInventoryScreen;
 
 		// 1) 鼠标中键：一键整理
 		//
 		// 创造模式的物品栏里，中键是原版「复制物品」的绑定（keyPickItem），
 		// 那是很顺手的老习惯，不该被抢走；而且创造模式物品栏本来也没什么好整理的，
 		// 所以那边不做中键整理，把中键还给原版。
-		if (!(screen() instanceof CreativeModeInventoryScreen)
-				&& matchesMouse(InventoryButlerClient.sortKey(), event)) {
-			if (ModConfig.sortEnabled) {
-				// 整理不发任何提示 —— 这是个高频操作，弹一行字反而挡住视线
-				ClientPlayNetworking.send(new SortPayload(menu.containerId));
-			}
-			cir.setReturnValue(true);
-			return;
-		}
-
-		// 2) 自绘按钮只认左键 —— 原版按钮也都是左键。
 		//
-		// 顺序上放在槽位判定之前：垃圾桶在 GUI 里的空地上，先判按钮可以少走一遍
-		// 36 个槽位的循环。
-		if (event.button() == 0 && inventorybutler$showButtons()) {
-			int[] pos = inventorybutler$trashButtonPos();
-			if (ModConfig.trashEnabled
-					&& isOverButton(pos[0], pos[1], event.x(), event.y())) {
-				boolean carrying = !menu.getCarried().isEmpty();
-				// 手上有东西就丢进去；手是空的且垃圾桶有东西，就取回来（撤销）
-				int action = (carrying || ClientTrashState.isEmpty())
-						? TrashPayload.ACTION_CARRIED
-						: TrashPayload.ACTION_RECLAIM;
-				ClientPlayNetworking.send(new TrashPayload(menu.containerId, -1, action));
-				// 记一笔，等会儿的 mouseReleased 要一起吞掉
-				inventorybutler$customButtonPressed = true;
-				cir.setReturnValue(true);
+		// 只接 GUI 范围内的点击：JEI / EMI 的物品列表、书签栏和配方书都在 GUI 之外，
+		// 那里也有自己的中键操作，抢过来会让别的 mod 的界面失灵。
+		if (!creative && matchesMouse(InventoryButlerClient.sortKey(), event)
+				&& isHovering(0, 0, this.imageWidth, this.imageHeight, event.x(), event.y())) {
+			if (!ModConfig.sortEnabled) {
+				// 功能关着时把这个键还给原版，而不是吞掉（创造模式的中键「复制物品」同理）
 				return;
 			}
+			// 整理不发任何提示 —— 这是个高频操作，弹一行字反而挡住视线。
+			// 但「服务端没装本 mod」是例外：不说一声，玩家只会觉得按键坏了。
+			if (!ClientPlayNetworking.canSend(SortPayload.TYPE)) {
+				ClientFeedback.showTranslation("inventorybutler.message.server.missing");
+				// 不吞掉这次点击：让原版 / 别的 mod 拿到它
+				return;
+			}
+			ClientPlayNetworking.send(new SortPayload(serverContainerId()));
+			cir.setReturnValue(true);
+			return;
 		}
 
 		Slot slot = slotAt(event.x(), event.y());
@@ -158,53 +140,56 @@ public abstract class AbstractContainerScreenMixin {
 			return;
 		}
 
-		// 3) Shift+点击（快捷移动）：背包里的收藏物不许被搬进容器。
+		// 2) Shift+点击（快捷移动）的收藏保护不在这里做。
 		//
-		// 服务端在菜单入口也有同样的拦截（权威），这里拦是为了两件事：
-		// 弹一行提示告诉玩家为什么没动静 + 不让客户端的点击预测和服务端打架。
-		// 只拦背包方向 —— 从容器往背包搬（拿回东西）不受限。
-		if (ModConfig.favoriteEnabled && ModConfig.favoriteProtectFromDrop
-				&& event.button() == 0 && event.hasShiftDown()
-				&& slot.container instanceof Inventory
-				&& FavoriteStacks.isFavorite(slot.getItem())) {
-			ClientFeedback.cannotMoveFavorite();
+		// 同一个槽位在背包界面里是「背包内换格」，在箱子界面里却是「搬进箱子」——
+		// 只看「点的是哪个格」会把前者也误拦。真正的位置判断在
+		// AbstractContainerMenuMixin#moveItemStackTo 里按目的地判断，客户端预测和
+		// 服务端执行跑的是同一段代码，所以这里放行即可。
+
+		// 3) Alt + 左键：收藏 / 取消收藏
+		//
+		// 空格子没有可收藏的东西，此时放行给原版（左键放东西 / 创造模式垃圾桶等）。
+		// 创造模式的菜单是客户端专用的物品选择器，槽位下标和服务端的 InventoryMenu
+		// 对不上；只有真正的玩家背包格能收藏（物品选择页是底部快捷栏，「物品栏」页
+		// 是整块背包），都要先换算成服务端 InventoryMenu 下标再发。
+		if (ModConfig.favoriteEnabled && event.button() == 0 && event.hasAltDown()
+				&& !slot.getItem().isEmpty()) {
+			int slotId = serverSlotId(slot);
+			if (slotId < 0) {
+				return;
+			}
+			if (!ClientPlayNetworking.canSend(FavoriteTogglePayload.TYPE)) {
+				ClientFeedback.showTranslation("inventorybutler.message.server.missing");
+				return;
+			}
+			ClientPlayNetworking.send(new FavoriteTogglePayload(serverContainerId(), slotId));
 			cir.setReturnValue(true);
 			return;
 		}
 
-		// 4) Alt + 左键：收藏 / 取消收藏
-		if (ModConfig.favoriteEnabled && event.button() == 0 && event.hasAltDown()) {
-			ClientPlayNetworking.send(new FavoriteTogglePayload(menu.containerId, slot.index));
-			cir.setReturnValue(true);
-			return;
-		}
-
-		// 5) Ctrl + 左键：把这一格丢进垃圾桶（泰拉瑞亚式的删除）
-		if (ModConfig.trashEnabled && event.button() == 0 && event.hasControlDown()
-				&& SlotSections.acceptsTransfer(slot)) {
-			ClientPlayNetworking.send(new TrashPayload(
-					menu.containerId, slot.index, TrashPayload.ACTION_SLOT));
-			cir.setReturnValue(true);
-		}
-	}
-
-	/**
-	 * 修「点界面外的按钮时，光标上的物品被丢到地上」。
-	 *
-	 * <p>根因：自绘按钮画在 GUI 底边上（{@code imageHeight} 起、整体在 GUI 之外），
-	 * 点它 = 点到界面外。
-	 * 原版 {@code mouseReleased} 里有一条：只要这次点击是在界面外按下的，松手时就把
-	 * 光标上拿着的物品走 {@code slotClicked(slot, -999, button, PICKUP)} 丢出去。</p>
-	 *
-	 * <p>对垃圾桶来说这尤其糟 —— 取回时物品刚好被放到了光标上，
-	 * 于是「取回」变成「丢出」。所以这里把两种情况都吞掉：
-	 * 松手落在按钮上、或本次点击本来就是按在按钮上的。</p>
-	 */
-	@Inject(method = "mouseReleased(Lnet/minecraft/client/input/MouseButtonEvent;)Z",
-			at = @At("HEAD"), cancellable = true)
-	private void inventorybutler$onMouseReleased(MouseButtonEvent event, CallbackInfoReturnable<Boolean> cir) {
-		if (inventorybutler$customButtonPressed || inventorybutler$isOverAnyButton(event)) {
-			inventorybutler$customButtonPressed = false;
+		// 4) Alt + 右键：打 / 取消归位标记。
+		//
+		// 只认玩家背包 0-35 —— 箱子的格子、护甲格没有「归位」可言。
+		// 空格子只有在已经有标记时才有效（取消标记）；否则放行给原版，
+		// 别吞掉 Alt+右键原本的半叠拿起 / 放一个。
+		if (ModConfig.pinEnabled && event.button() == 1 && event.hasAltDown()) {
+			int home = inventoryHome(slot);
+			if (home < 0) {
+				return;
+			}
+			if (slot.getItem().isEmpty() && ClientPinState.at(home).isEmpty()) {
+				return;
+			}
+			int slotId = serverSlotId(slot);
+			if (slotId < 0) {
+				return;
+			}
+			if (!ClientPlayNetworking.canSend(PinPayload.TYPE)) {
+				ClientFeedback.showTranslation("inventorybutler.message.server.missing");
+				return;
+			}
+			ClientPlayNetworking.send(new PinPayload(serverContainerId(), slotId));
 			cir.setReturnValue(true);
 		}
 	}
@@ -218,6 +203,12 @@ public abstract class AbstractContainerScreenMixin {
 	private void inventorybutler$onKeyPressed(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
 		AbstractContainerMenu menu = this.menu;
 		if (menu == null) {
+			return;
+		}
+
+		// 铁砧的改名框、创造模式的搜索框都开着 EditBox；有焦点时字母 / Delete 属于输入，
+		// 我们的热键必须让路 —— 否则改绑到字母键上的热键会在输入框里触发。
+		if (((Screen) (Object) this).getFocused() instanceof EditBox) {
 			return;
 		}
 
@@ -239,45 +230,40 @@ public abstract class AbstractContainerScreenMixin {
 			return;
 		}
 
-		// 中键是鼠标事件，永远不会以键盘事件的形式到这里；
-		// 这里管的是 R 这个第二绑定（以及玩家自己改到键盘上的任何键）。
-		if (matches(InventoryButlerClient.sortKey(), event)
-				|| matches(InventoryButlerClient.sortAltKey(), event)) {
+		// 中键是鼠标事件，正常不会走到键盘事件这里；但如果玩家把整理改绑到键盘键上，
+		// 键盘路径也要能用。功能关着时不认这个键 —— 把它还给原版，
+		// 免得玩家改绑到有原版含义的键上却被吞掉。
+		if (matches(InventoryButlerClient.sortKey(), event)) {
+			// 和鼠标中键那条路保持一致：拖拽分堆进行中不整理（松手时会按旧槽位落堆），
+			// 创造模式物品栏也不整理（界面菜单是客户端专用的选择器，服务端对不上）。
+			if (this.isQuickCrafting || screen() instanceof CreativeModeInventoryScreen) {
+				return;
+			}
 			if (ModConfig.sortEnabled) {
-				ClientPlayNetworking.send(new SortPayload(menu.containerId));
+				if (!ClientPlayNetworking.canSend(SortPayload.TYPE)) {
+					ClientFeedback.showTranslation("inventorybutler.message.server.missing");
+					return;
+				}
+				ClientPlayNetworking.send(new SortPayload(serverContainerId()));
+				cir.setReturnValue(true);
 			}
-			cir.setReturnValue(true);
-			return;
-		}
-
-		if (matches(InventoryButlerClient.trashKey(), event)) {
-			if (ModConfig.trashEnabled && hoveredSlot != null && SlotSections.acceptsTransfer(hoveredSlot)) {
-				ClientPlayNetworking.send(new TrashPayload(
-						menu.containerId, hoveredSlot.index, TrashPayload.ACTION_SLOT));
-			}
-			cir.setReturnValue(true);
 			return;
 		}
 
 		if (matches(InventoryButlerClient.favoriteKey(), event)) {
 			if (ModConfig.favoriteEnabled && hoveredSlot != null && !hoveredSlot.getItem().isEmpty()) {
-				ClientPlayNetworking.send(new FavoriteTogglePayload(menu.containerId, hoveredSlot.index));
-			}
-			cir.setReturnValue(true);
-			return;
-		}
-
-		// T：给指向的这一格打「归位标记」（再按一次取消）。
-		//
-		// 只认玩家背包 0-35 —— 箱子的格子、护甲格没有「归位」可言。
-		// 服务端还会再挡一道，这里先挡是为了不白发一个注定被丢掉的包。
-		if (matches(InventoryButlerClient.pinKey(), event)) {
-			if (ModConfig.pinEnabled && hoveredSlot != null
-					&& SlotSections.playerIndex(hoveredSlot) >= 0) {
-				ClientPlayNetworking.send(new PinPayload(menu.containerId, hoveredSlot.index));
+				int slotId = serverSlotId(hoveredSlot);
+				if (slotId < 0) {
+					return;
+				}
+				if (!ClientPlayNetworking.canSend(FavoriteTogglePayload.TYPE)) {
+					ClientFeedback.showTranslation("inventorybutler.message.server.missing");
+					return;
+				}
+				ClientPlayNetworking.send(new FavoriteTogglePayload(serverContainerId(), slotId));
 				cir.setReturnValue(true);
 			}
-			// 没命中有效槽位就放行，别把 T 键对其它界面组件的作用吞掉
+			return;
 		}
 	}
 
@@ -316,78 +302,107 @@ public abstract class AbstractContainerScreenMixin {
 		return mc == null ? null : mc.options.keyDrop;
 	}
 
+	/**
+	 * 界面关闭 / 被替换时清空提示队列。
+	 *
+	 * <p>提示是对「刚才这次操作」的反馈：界面都关了，剩下的几条再在下一个界面里
+	 * 补播只会让人一头雾水（换存档 / 切屏之后尤其明显）。</p>
+	 */
+	@Inject(method = "removed()V", at = @At("TAIL"))
+	private void inventorybutler$clearMessagesOnClose(CallbackInfo ci) {
+		ScreenMessage.clear();
+	}
+
 	// ------------------------------------------------------------------
 	// 渲染
 	// ------------------------------------------------------------------
 
 	/**
-	 * 每个槽位画完之后的补充绘制：先「归位幽灵」，再「收藏星标」。
+	 * 非空槽位的归位角标，要在原版画数量 / 耐久条之前画。
 	 *
-	 * <p>两件事合并在同一个注入点里，是为了保证先后顺序 —— 幽灵那层是用带透明度的
-	 * 槽位底色盖出来的，要是盖在星标上面会把星标一起洗淡。</p>
+	 * <p>加粗后的白色角标会往物品区里压 1–2px，而堆叠数量就在右下角、耐久条就在下沿；
+	 * 要是等到 {@code extractSlot} 的 TAIL 再画，会把它们盖住。角标在
+	 * {@code itemDecorations} 之前落笔，原版随后画的数量和耐久条就压在角标上面 ——
+	 * 信息优先，角标仍然露在外面。</p>
+	 */
+	@Inject(method = "extractSlot(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/world/inventory/Slot;II)V",
+			at = @At(value = "INVOKE",
+					target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;itemDecorations(Lnet/minecraft/client/gui/Font;Lnet/minecraft/world/item/ItemStack;IILjava/lang/String;)V",
+					shift = At.Shift.BEFORE))
+	private void inventorybutler$drawPinCornersBeforeDecorations(GuiGraphicsExtractor extractor, Slot slot,
+			int mouseX, int mouseY, CallbackInfo ci) {
+		if (!ModConfig.pinEnabled) {
+			return;
+		}
+		int home = inventoryHome(slot);
+		if (home < 0 || ClientPinState.at(home).isEmpty()) {
+			return;
+		}
+		InventoryOverlay.drawPinCorners(extractor, slot);
+	}
+
+	/**
+	 * 槽位收尾的补充绘制。
+	 *
+	 * <p><b>空槽</b>：先画「归位幽灵」，再把归位角标压在它上面（空槽没有收藏，
+	 * 实际只有前两步）。幽灵是用带透明度的槽位底色盖出来的，角标必须在它之后画，
+	 * 否则会被一起洗淡。</p>
+	 *
+	 * <p><b>非空槽</b>：归位角标已经在 {@code itemDecorations} 之前画过，数量和耐久条
+	 * 会压在它上面；这里只补收藏边框。收藏边框和归位角标共用外框，有归位角标时
+	 * 金色中段两端各让出 4px 给深色外衬，像素上不重叠，拼起来仍是一整圈。</p>
+	 *
+	 * <p>把「这一格有没有归位角标」传给收藏边框，决定四角留 2px 还是 4px。</p>
 	 */
 	@Inject(method = "extractSlot(Lnet/minecraft/client/gui/GuiGraphicsExtractor;Lnet/minecraft/world/inventory/Slot;II)V",
 			at = @At("TAIL"))
 	private void inventorybutler$drawSlotDecorations(GuiGraphicsExtractor extractor, Slot slot,
 			int mouseX, int mouseY, CallbackInfo ci) {
 		ItemStack stack = slot.getItem();
+		boolean pinOutlinePresent = false;
 
-		// 归位幽灵：这一格被标记过、而标记的物品现在不在这儿（格是空的），
-		// 就用半透明图标占位，告诉玩家「这格是给它的」。
-		// 只在「空」的时候画 —— 格里有别的东西时再叠一层图标会看不清。
-		if (ModConfig.pinEnabled && stack.isEmpty()) {
-			int home = SlotSections.playerIndex(slot);
+		if (ModConfig.pinEnabled) {
+			int home = inventoryHome(slot);
 			if (home >= 0) {
 				ItemStack pinned = ClientPinState.at(home);
 				if (!pinned.isEmpty()) {
-					InventoryOverlay.drawGhostItem(extractor, slot, pinned);
+					pinOutlinePresent = true;
+					if (stack.isEmpty()) {
+						// 幽灵图标只在空格上画：格里有别的东西时再叠一层图标会看不清。
+						InventoryOverlay.drawGhostItem(extractor, slot, pinned);
+						// 空槽没有 itemDecorations，角标在这里补；压在幽灵上面。
+						InventoryOverlay.drawPinCorners(extractor, slot);
+					}
+					// 非空槽的角标已在 itemDecorations 之前画好，这里不再覆盖数量/耐久条。
 				}
 			}
 		}
 
 		if (ModConfig.favoriteEnabled && !stack.isEmpty() && FavoriteStacks.isFavorite(stack)) {
-			InventoryOverlay.drawFavoriteBadge(extractor, slot);
+			InventoryOverlay.drawFavoriteFrame(extractor, slot, pinOutlinePresent);
 		}
 	}
 
 	/**
-	 * 槽位都画完之后，补上垃圾桶按钮：GUI 右下角、快捷栏末格正下方那块「口袋」。
+	 * 槽位都画完之后，把「指针现在是不是停在能收藏的格子上」告诉 CursorIcons ——
+	 * 按住 Alt 时它要用这个决定指针换不换星星图标。这里上报、applyCursor 在帧末读取，
+	 * 是同一帧的数据。
 	 *
-	 * <p>位置只依赖 {@code imageWidth} / {@code imageHeight}（见
-	 * {@code InventoryOverlay.buttonX} / {@code buttonY}），任何容器界面都自动成立 ——
-	 * 不需要把屏幕绝对坐标换算成 GUI 空间，也不再依赖原版配方书按钮的位置。</p>
+	 * <p>判定必须和 Alt+左键真正发包的条件一致：空格子不能收藏；创造模式里只有
+	 * 底部快捷栏那几格是真正的背包格，物品选择器里的「物品种类」格子不算。</p>
 	 */
 	@Inject(method = "extractSlots(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V", at = @At("TAIL"))
-	private void inventorybutler$drawButtons(GuiGraphicsExtractor extractor,
+	private void inventorybutler$reportPointerTarget(GuiGraphicsExtractor extractor,
 			int mouseX, int mouseY, CallbackInfo ci) {
-		if (this.menu == null || !inventorybutler$showButtons()) {
-			return;
-		}
-
-		// 顺便把「指针现在指着什么」告诉 CursorIcons —— 按住 Alt/Ctrl 时它要用这个
-		// 决定指针换不换图标。这里上报、applyCursor 在帧末读取，是同一帧的数据。
-		//
-		// 只在能画按钮的界面（即非创造模式物品栏）上报，于是创造模式那边
-		// 指针图标也跟着一起不生效 —— 那边有搜索框，Ctrl 是复制粘贴。
-		CursorIcons.reportPointerTarget(slotAt(mouseX, mouseY));
-
-		if (ModConfig.trashEnabled) {
-			int[] pos = inventorybutler$trashButtonPos();
-			boolean hovered = isOverButton(pos[0], pos[1], mouseX, mouseY);
-			// 「这一下会不会被服务端拒收」要在绘制前算出来 —— 危险态是画在按钮上的前置提示，
-			// 不能等点下去收到服务端的提示才告诉玩家。口径见 inventorybutler$carriedIsProtected。
-			boolean blocked = inventorybutler$carriedIsProtected();
-			InventoryOverlay.drawTrashButton(extractor, pos[0], pos[1], hovered, blocked);
-			if (hovered) {
-				InventoryOverlay.addTrashTooltip(extractor, mouseX, mouseY, blocked);
-			}
+		if (this.menu != null) {
+			CursorIcons.reportPointerTarget(isFavoriteTarget(slotAt(mouseX, mouseY)));
 		}
 	}
 
 	/**
 	 * 物品栏界面内的轻提示：画在 GUI 顶上方居中，原版底纹风格 + 淡入淡出。
 	 *
-	 * <p>动作栏文字挂在 HUD 上，容器界面打开时 HUD 不渲染 —— 收藏 / 归位 / 垃圾桶
+	 * <p>动作栏文字挂在 HUD 上，容器界面打开时 HUD 不渲染 —— 收藏 / 归位
 	 * 这些提示又全都是在界面里触发的，所以走这里显示（{@link ScreenMessage} 暂存并
 	 * 排队，{@code ClientFeedback} 负责分流）。所有容器界面（包括创造模式）都画。</p>
 	 *
@@ -441,73 +456,102 @@ public abstract class AbstractContainerScreenMixin {
 	}
 
 	/**
-	 * 垃圾桶按钮的位置（GUI 空间）：GUI 右下角、最后一行物品栏（快捷栏）末格的正下方。
+	 * 发往服务端的菜单 id。
 	 *
-	 * <p>x 取 {@code imageWidth - 32}，按钮右缘的「暗灰 ×2 + 黑 ×1」正好落在 GUI 右缘
-	 * 包边的那三列上，竖着看是一条连续的线；y 取 {@code imageHeight - 3}，顶部这 3px
-	 * 覆盖掉 GUI 底边框的「暗灰 ×2 + 黑 ×1」，两块面板灰连成一片 —— 整个按钮就像物品栏
-	 * 面板在右下角多长出来的一块口袋。</p>
-	 *
-	 * <p>按钮上部那 3px 已经压在原版 GUI 的绘制范围之内，主体仍在 {@code imageHeight}
-	 * 之外（对原版来说属于「界面外」），所以点击的松开事件必须由
-	 * {@code inventorybutler$onMouseReleased} 拦截（见那里的说明）。</p>
-	 *
-	 * <p>所有非创造模式的容器界面共用这一个位置，不再分配方书 / 无配方书两条分支：
-	 * 位置只依赖 {@code imageWidth} / {@code imageHeight}，连屏幕绝对坐标的换算
-	 * 都不需要了。</p>
+	 * <p>创造模式的界面用的是客户端专用的 {@code ItemPickerMenu}，服务端那边打开的
+	 * 仍是玩家自己的 {@code InventoryMenu}；两者的槽位布局完全不同，所以不能直接
+	 * 拿界面菜单的 id / 下标去发。这里统一换算到服务端真正持有的那个菜单。</p>
 	 */
-	private int[] inventorybutler$trashButtonPos() {
-		return new int[]{
-				InventoryOverlay.buttonX(this.imageWidth),
-				InventoryOverlay.buttonY(this.imageHeight),
-		};
+	private int serverContainerId() {
+		Minecraft mc = client();
+		if (screen() instanceof CreativeModeInventoryScreen && mc != null && mc.player != null) {
+			return mc.player.inventoryMenu.containerId;
+		}
+		return this.menu.containerId;
 	}
 
 	/**
-	 * 这一次点垃圾桶按钮会不会被服务端拒收 —— 也就是「手上拿着的物品是收藏物」。
+	 * 槽位在服务端菜单里的下标。
 	 *
-	 * <p>⚠️ <b>口径必须与 {@code TrashHandler.rejectIfProtected} 逐字一致</b>，
-	 * 否则就是假反馈：按钮画着「禁止」其实删得掉，或者看着能删、按下去却被拒。
-	 * 那边判的是 {@code ModConfig.favoriteProtectFromTrash && FavoriteStacks.isFavorite(stack)}，
-	 * <b>不含 {@code favoriteEnabled}</b> —— 后者只挡 Alt+左键的收藏开关
-	 * （见 {@code FavoriteHandler.toggle}），并不参与保护逻辑。所以这里也不能加：
-	 * 否则在「关掉收藏、但保护还开着」的配置下，服务端照拒，界面却一声不吭。</p>
-	 *
-	 * <p>只判「手上拿着的」—— 点按钮的动作是
-	 * {@code carrying || 桶空 ? ACTION_CARRIED : ACTION_RECLAIM}，
-	 * 而取回（{@code reclaim}）那条路径服务端从来不做保护判定。
-	 * 手是空的时候 {@code isFavorite} 必然为 false，所以不需要额外分支。</p>
+	 * <p>普通容器界面里客户端和服务端的菜单是同一套布局，{@code slot.index} 直接可用。
+	 * 创造模式则先由 {@link #inventoryHome(Slot)} 找到真实背包下标，再到服务端
+	 * {@code InventoryMenu} 里找对应的槽位：物品选择页的快捷栏（界面下标 45-53）
+	 * 换算成 36-44；「物品栏」页的 {@code SlotWrapper} 自带 InventoryMenu 下标，
+	 * 主背包 / 快捷栏都能正确对上。物品选择器里那 45 个「物品种类」格子、护甲格、
+	 * 副手格都不是可收藏的背包格，返回 -1，让 Alt+左键 / 右键保持原版的取物行为。</p>
 	 */
-	private boolean inventorybutler$carriedIsProtected() {
-		if (!ModConfig.favoriteProtectFromTrash || this.menu == null) {
-			return false;
+	private int serverSlotId(Slot slot) {
+		if (!(screen() instanceof CreativeModeInventoryScreen)) {
+			return slot.index;
 		}
-		return FavoriteStacks.isFavorite(this.menu.getCarried());
+		int home = inventoryHome(slot);
+		if (home < 0) {
+			return -1;
+		}
+		Minecraft mc = client();
+		if (mc == null || mc.player == null) {
+			return -1;
+		}
+		for (Slot candidate : mc.player.inventoryMenu.slots) {
+			if (SlotRules.inventoryIndex(candidate) == home) {
+				return candidate.index;
+			}
+		}
+		return -1;
 	}
 
 	/**
-	 * 要不要画垃圾桶按钮。
+	 * 这个槽位对应的玩家背包下标（0-8 快捷栏、9-35 主背包），不是真背包格时返回 -1。
 	 *
-	 * <p>创造模式物品栏右下角本来就自带一个「销毁物品」格，再加上它的界面布局完全不同
-	 * （标签页 / 搜索框 / 滚动条），往里塞按钮很容易打架。所以那边不画 ——
-	 * 中键整理同样在创造模式里让给了原版。</p>
+	 * <p>普通容器界面直接用 {@link SlotRules#inventoryIndex(Slot)}。创造模式要小心：
+	 * 「物品栏」页会把服务端 {@code InventoryMenu} 的槽位包成
+	 * {@code SlotWrapper(target, inventoryMenuIndex, x, y)} —— 包装槽把自己的
+	 * {@code containerSlot} 填成了 <b>InventoryMenu 下标</b>，不是真正背包下标，所以
+	 * 直接问 {@code SlotRules} 会把护甲格 5-8 误认成快捷栏 5-8，还会把真正的快捷栏
+	 * 包装槽（InventoryMenu 下标 36-44）判成 -1。这里按创造模式的两种页签分开换算：</p>
+	 *
+	 * <ul>
+	 *   <li><b>物品选择页</b>：0-44 是物品种类（容器不是 {@link Inventory}，自然排除），
+	 *       45-53 是普通 {@code Slot}，{@code containerSlot} 就是背包 0-8；</li>
+	 *   <li><b>「物品栏」页</b>：0-4 合成、5-8 护甲、45 副手都不是归位对象；
+	 *       9-35 是主背包，36-44 是快捷栏。包装槽的 {@code slot.index} 正好等于
+	 *       InventoryMenu 下标，所以 9-35 原样用、36-44 减 36。</li>
+	 * </ul>
 	 */
-	private boolean inventorybutler$showButtons() {
-		return !(screen() instanceof CreativeModeInventoryScreen);
+	private int inventoryHome(Slot slot) {
+		if (!(screen() instanceof CreativeModeInventoryScreen)) {
+			return SlotRules.inventoryIndex(slot);
+		}
+		if (slot == null || slot.isFake() || !(slot.container instanceof Inventory)) {
+			return -1;
+		}
+		int index = slot.index;
+		if (index >= 9 && index <= 35) {
+			// 「物品栏」页的主背包包装槽
+			return index;
+		}
+		if (index >= 36 && index <= 44) {
+			// 「物品栏」页的快捷栏包装槽
+			return index - 36;
+		}
+		if (index >= 45 && index <= 53) {
+			// 物品选择页底部的快捷栏是普通 Slot；「物品栏」页 45 是副手（containerSlot=45）
+			int home = slot.getContainerSlot();
+			return home >= 0 && home <= SlotRules.HOTBAR_LAST ? home : -1;
+		}
+		// 0-4 合成格、5-8 护甲、以及创造模式之外的杂项
+		return -1;
 	}
 
-	/** 鼠标是不是停在垃圾桶按钮上。用原版的 isHovering —— 它内部会自己加上 leftPos/topPos。 */
-	private boolean isOverButton(int x, int y, double mouseX, double mouseY) {
-		return isHovering(x, y, InventoryOverlay.BUTTON_WIDTH, InventoryOverlay.BUTTON_HEIGHT, mouseX, mouseY);
-	}
-
-	/** 松手时用：这一次松开是不是落在垃圾桶按钮上的。 */
-	private boolean inventorybutler$isOverAnyButton(MouseButtonEvent event) {
-		if (event.button() != 0 || !inventorybutler$showButtons()) {
+	/** 指针下的这一格能不能被 Alt+左键收藏（和发包条件保持一致）。 */
+	private boolean isFavoriteTarget(Slot slot) {
+		if (slot == null || slot.getItem().isEmpty()) {
 			return false;
 		}
-		int[] pos = inventorybutler$trashButtonPos();
-		return ModConfig.trashEnabled && isOverButton(pos[0], pos[1], event.x(), event.y());
+		if (screen() instanceof CreativeModeInventoryScreen) {
+			return inventoryHome(slot) >= 0;
+		}
+		return true;
 	}
 
 	private Slot slotAt(double mouseX, double mouseY) {
@@ -516,7 +560,8 @@ public abstract class AbstractContainerScreenMixin {
 			return null;
 		}
 		for (Slot slot : menu.slots) {
-			if (slot.isActive() && isHovering(slot.x, slot.y, 16, 16, mouseX, mouseY)) {
+			if (slot.isActive() && !slot.isFake()
+					&& isHovering(slot.x, slot.y, 16, 16, mouseX, mouseY)) {
 				return slot;
 			}
 		}

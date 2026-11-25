@@ -7,7 +7,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.platform.cursor.CursorType;
 import net.minecraft.client.Minecraft;
-import net.minecraft.world.inventory.Slot;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.system.MemoryUtil;
@@ -18,9 +17,8 @@ import java.nio.ByteBuffer;
 /**
  * 「按住修饰键时鼠标指针换图标」。
  *
- * <p>按住 <b>Alt</b>（收藏）指针变成金色星星，按住 <b>Ctrl</b>（删除）变成垃圾桶，
- * 松手立刻变回箭头。图标只在指针确实停在<b>能生效的槽位</b>上时才换 ——
- * 界面空白处、铁砧的输入框上都不换，免得你按 Ctrl+C 打字时指针变成垃圾桶。</p>
+ * <p>按住 <b>Alt</b>（收藏）指针变成金色星星，松手立刻变回箭头。图标只在指针确实
+ * 停在<b>能生效的槽位</b>上时才换 —— 界面空白处、铁砧的输入框上都不换。</p>
  *
  * <p><b>为什么不自己调 GLFW？</b>因为原版留了一条更好的路：
  * {@code Gui} 每帧末尾会调 {@code GuiGraphicsExtractor.applyCursor(window)}，
@@ -86,19 +84,16 @@ public final class CursorIcons {
 	 */
 	private static final double STAR_CENTER_Y = 0.541;
 
-	/** 与角标同一颗金（InventoryOverlay.STAR_COLOR），整套 UI 只用一种金色。 */
+	/** 和收藏边标、模组图标同一颗金，整套 UI 只用一种金色。 */
 	private static final int STAR_FILL = 0xFFFFD64A;
 	private static final int STAR_LINE = 0xFF5A3A00;
-	private static final int TRASH_FILL = 0xFFE2E2E2;
-	private static final int TRASH_LINE = 0xFF2B2B2B;
 
 	private static CursorType starCursor;
-	private static CursorType trashCursor;
 	/** 造光标失败过就不再重试，免得每帧都刷日志。 */
 	private static boolean unavailable;
 
 	/**
-	 * 本帧「指针停在能收藏的格子上」/「停在能删除的格子上」。
+	 * 本帧「指针停在能收藏的格子上」。
 	 *
 	 * <p>由 {@code AbstractContainerScreenMixin} 在每次绘制物品栏时上报。
 	 * {@link #contextReady} 是配套的「本帧确实画过物品栏界面」标志：
@@ -106,23 +101,20 @@ public final class CursorIcons {
 	 */
 	private static boolean contextReady;
 	private static boolean overFavoriteTarget;
-	private static boolean overTrashTarget;
 
 	private CursorIcons() {
 	}
 
 	/**
-	 * 物品栏界面每次绘制时上报一次「指针现在指着什么」。
+	 * 物品栏界面每次绘制时上报一次「指针现在是不是停在能收藏的格子上」。
 	 *
-	 * <p>传 null 表示没指着槽位。创造模式物品栏那边压根不会调到这里
-	 * （那个界面整列自绘按钮都不画，这里跟着一起跳过）。</p>
+	 * <p>传 false 表示不换图标：没指着槽位、指着空格子，或者在创造模式里指着
+	 * 物品选择器（那里不是玩家背包）。判定由 {@code AbstractContainerScreenMixin}
+	 * 负责，必须和 Alt+左键真正发包的条件保持一致。</p>
 	 */
-	public static void reportPointerTarget(Slot slot) {
+	public static void reportPointerTarget(boolean validTarget) {
 		contextReady = true;
-		// 和 AbstractContainerScreenMixin 里真正发包的条件保持一致：
-		// 收藏只要有槽位就行，删除还要求这一格允许转移（箱子格不行）。
-		overFavoriteTarget = slot != null;
-		overTrashTarget = slot != null && SlotSections.acceptsTransfer(slot);
+		overFavoriteTarget = validTarget;
 	}
 
 	/**
@@ -148,12 +140,9 @@ public final class CursorIcons {
 			return null;
 		}
 
-		// Alt 优先于 Ctrl —— 和 mouseClicked 里的判定顺序一致，两个键一起按时结果不会打架。
-		if (overFavoriteTarget && ModConfig.favoriteEnabled && isDown(window, GLFW.GLFW_KEY_LEFT_ALT, GLFW.GLFW_KEY_RIGHT_ALT)) {
+		if (overFavoriteTarget && ModConfig.favoriteEnabled
+				&& isDown(window, GLFW.GLFW_KEY_LEFT_ALT, GLFW.GLFW_KEY_RIGHT_ALT)) {
 			return star(mc);
-		}
-		if (overTrashTarget && ModConfig.trashEnabled && isDown(window, GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_KEY_RIGHT_CONTROL)) {
-			return trash(mc);
 		}
 		return null;
 	}
@@ -167,7 +156,6 @@ public final class CursorIcons {
 	public static void reset() {
 		contextReady = false;
 		overFavoriteTarget = false;
-		overTrashTarget = false;
 	}
 
 	private static boolean isDown(Window window, int left, int right) {
@@ -176,24 +164,17 @@ public final class CursorIcons {
 
 	private static CursorType star(Minecraft mc) {
 		if (starCursor == null) {
-			starCursor = build(mc, true);
+			starCursor = build(mc);
 		}
 		return starCursor;
 	}
 
-	private static CursorType trash(Minecraft mc) {
-		if (trashCursor == null) {
-			trashCursor = build(mc, false);
-		}
-		return trashCursor;
-	}
-
 	/** 画位图 → 造 GLFW 光标 → 包成 CursorType。三样都不成的话返回 null 并永久停用。 */
-	private static CursorType build(Minecraft mc, boolean star) {
+	private static CursorType build(Minecraft mc) {
 		ByteBuffer pixels = MemoryUtil.memAlloc(SIZE * SIZE * 4);
 		GLFWImage.Buffer image = null;
 		try {
-			paint(pixels, star);
+			paint(pixels);
 			pixels.flip();
 
 			image = GLFWImage.malloc(1);
@@ -210,7 +191,7 @@ public final class CursorIcons {
 				return null;
 			}
 
-			CursorType type = wrap(star ? "inventorybutler_star" : "inventorybutler_trash", handle);
+			CursorType type = wrap("inventorybutler_star", handle);
 			if (type == null) {
 				GLFW.glfwDestroyCursor(handle);
 				unavailable = true;
@@ -255,8 +236,8 @@ public final class CursorIcons {
 	// 位图：先按 16x16 逻辑分辨率点采样成硬边点阵，再放大成 2x2 方块
 	// ------------------------------------------------------------------
 
-	private static void paint(ByteBuffer out, boolean star) {
-		int[][] map = rasterize(star);
+	private static void paint(ByteBuffer out) {
+		int[][] map = rasterize();
 		for (int py = 0; py < SIZE; py++) {
 			int[] row = map[py / PIXEL];
 			for (int px = 0; px < SIZE; px++) {
@@ -280,14 +261,9 @@ public final class CursorIcons {
 	 *
 	 * <p>每个逻辑画素只取<b>中心一个点</b>做判定，要么整个画素着色、要么整个透明，
 	 * 没有半透明的过渡像素 —— 硬边像素画就是这么来的。星星用解析式多边形
-	 * （内缩一圈当描边）；垃圾桶直接查 {@link #TRASH_ART} 点阵 —— 和按钮上
-	 * 那个 12x12 图标是同一个造型（提手 → 盖 → 缝 → 带透气孔的梯形桶身），
-	 * 像素画手画比解析式几何更可控。</p>
+	 * （内缩一圈当描边）。</p>
 	 */
-	private static int[][] rasterize(boolean star) {
-		if (!star) {
-			return trashMap();
-		}
+	private static int[][] rasterize() {
 		int[][] map = new int[LOGICAL][LOGICAL];
 		for (int ly = 0; ly < LOGICAL; ly++) {
 			for (int lx = 0; lx < LOGICAL; lx++) {
@@ -333,55 +309,5 @@ public final class CursorIcons {
 			}
 		}
 		return inside;
-	}
-
-	// ------------------------------------------------------------------
-	// 垃圾桶点阵：与 InventoryOverlay 按钮图标同一造型
-	//
-	//   '#'=深色（提手/盖子/桶身边框/透气孔）  'o'=浅色桶身填充  '.'=透明
-	//
-	// 16 逻辑像素，每行 16 列：
-	//   提手（2x2，居中） → 盖子（10x2） → 空 1 行 → 桶身（深色边框 10 宽、
-	//   浅色内芯 8 宽、两条深色透气孔分三格） → 底边收窄 1px（梯形感）。
-	// 深描边 + 浅填充是为了光标在任何明暗背景上都看得清 —— 按钮图标是
-	// 深色压浅底，光标反过来，因为光标底下是什么界面谁也说不准。
-	// ------------------------------------------------------------------
-
-	private static final String[] TRASH_ART = {
-			"................",
-			".......##.......",
-			".......##.......",
-			"...##########...",
-			"...##########...",
-			"................",
-			"...##########...",
-			"...#oo#oo#oo#...",
-			"...#oo#oo#oo#...",
-			"...#oo#oo#oo#...",
-			"...#oo#oo#oo#...",
-			"...#oo#oo#oo#...",
-			"...#oo#oo#oo#...",
-			"....########....",
-			"................",
-			"................",
-	};
-
-	private static int[][] trashMap;
-
-	private static int[][] trashMap() {
-		if (trashMap == null) {
-			trashMap = new int[LOGICAL][LOGICAL];
-			for (int row = 0; row < LOGICAL; row++) {
-				String line = TRASH_ART[row];
-				for (int col = 0; col < LOGICAL; col++) {
-					switch (line.charAt(col)) {
-						case '#' -> trashMap[row][col] = TRASH_LINE;
-						case 'o' -> trashMap[row][col] = TRASH_FILL;
-						default -> trashMap[row][col] = 0;
-					}
-				}
-			}
-		}
-		return trashMap;
 	}
 }
