@@ -11,7 +11,6 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * 客户端入口。
@@ -45,11 +44,12 @@ public class InventoryButlerClient implements ClientModInitializer {
 		// 原版的「按键设置」界面里会正确显示成「鼠标 中键」，也能被鼠标事件匹配到。
 		sortKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.inventorybutler.sort",
-				InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_MIDDLE, CATEGORY));
+				InputConstants.Type.MOUSE, InputConstants.MOUSE_BUTTON_MIDDLE, CATEGORY));
 		// 收藏默认不绑键盘键：Alt+左键是主操作，这里只留一个可选的键盘替代键。
+		// 26.3 起输入后端换成 SDL：`KEYSYM` 改叫 `KEYBOARD`，未绑定键用 UNKNOWN（值 0）。
 		favoriteKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.inventorybutler.favorite",
-				InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, CATEGORY));
+				InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), CATEGORY));
 
 		// 服务端是归位标记的权威，客户端只是拿一份副本用于渲染。
 		ClientPlayNetworking.registerGlobalReceiver(PinSyncPayload.TYPE, (payload, context) ->

@@ -12,10 +12,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * 换鼠标指针图标的落点。
  *
- * <p>与「自己调 {@code GLFW.glfwSetCursor}」相比，这里走的是原版自己的通道：
+ * <p>与「自己调 {@code SDL_SetCursor}」相比，这里走的是原版自己的通道：
  * {@code Gui} 每帧末尾会调 {@code applyCursor(window)}，把当帧攒下来的光标交给
  * {@code Window.selectCursor}，而后者是按<b>引用</b>去重的
- * （{@code currentCursor != target} 才真的落到 GLFW）。这么做的收益是：</p>
+ * （{@code currentCursor != target} 才真的落到 SDL）。这么做的收益是：</p>
  * <ul>
  *   <li><b>恢复箭头不用写代码</b> —— 渲染器每帧都是新对象，{@code pendingCursor} 每帧从
  *       {@code CursorType.DEFAULT} 起步。我一停止覆盖，原版下一帧自己就把箭头换回来了；</li>

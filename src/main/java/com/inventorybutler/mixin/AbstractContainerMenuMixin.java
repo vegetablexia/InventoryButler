@@ -28,7 +28,7 @@ import java.util.Map;
 /**
  * 「收藏物丢不掉 / 搬不走」的防线 —— 拦在容器菜单的点击入口。
  *
- * <p>上一版只在 {@code LocalPlayer.drop} / {@code ServerPlayer.drop} 上拦，那只能覆盖
+ * <p>上一版只在客户端丢弃入口 / {@code ServerPlayer.drop} 上拦，那只能覆盖
  * <b>界面关着</b>时的 Q 键。物品栏界面打开时按 Q，原版走的是另一条路：</p>
  *
  * <pre>
@@ -169,7 +169,7 @@ public abstract class AbstractContainerMenuMixin {
 	 * <p>原版 Shift 快移会把物品塞进目的地里第一个能放的格子（箱子 -&gt; 背包时从
 	 * 快捷栏最后一格开始倒着找）。如果这件物品有归位标记，服务端随后会在
 	 * {@code clicked} 的 TAIL 里把它换回预留格 —— 但<b>客户端预测只看到原版的落点</b>
-	 * （26.2 的 {@code MultiPlayerGameMode.handleContainerInput} 会先在本地跑一遍
+	 * （26.3 的 {@code MultiPlayerGameMode.handleContainerInput} 会先在本地跑一遍
 	 * {@code menu.clicked}），于是物品会先在默认格闪一下，再被服务端纠正。</p>
 	 *
 	 * <p>这里让客户端预测和服务端在<b>同一个位置</b>（{@code moveItemStackTo} 的入口）

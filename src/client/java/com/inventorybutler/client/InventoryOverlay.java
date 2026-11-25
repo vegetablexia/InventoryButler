@@ -96,7 +96,7 @@ public final class InventoryOverlay {
 	/**
 	 * 画「归位幽灵」—— 预留位空着时用半透明图标提示这一格是留给谁的。
 	 *
-	 * <p><b>半透明是怎么做出来的</b>：26.2 的 {@link GuiGraphicsExtractor} 没有 alpha /
+	 * <p><b>半透明是怎么做出来的</b>：26.3 的 {@link GuiGraphicsExtractor} 没有 alpha /
 	 * 着色接口，连 {@code item(ItemStack, int, int)} 都没有颜色参数（只有个是旋转用的种子），
 	 * 所以直接按 alpha 画物品这条路走不通。</p>
 	 *

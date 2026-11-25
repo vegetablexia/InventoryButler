@@ -6,7 +6,7 @@
 		"AbstractContainerScreenMixin",
 		"CursorTypeInvoker",
 		"GuiGraphicsExtractorMixin",
-		"LocalPlayerDropMixin"
+		"MultiPlayerGameModeDropMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

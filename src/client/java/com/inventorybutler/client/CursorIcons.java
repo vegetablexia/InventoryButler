@@ -4,11 +4,12 @@ import com.inventorybutler.InventoryButler;
 import com.inventorybutler.ModConfig;
 import com.inventorybutler.client.mixin.CursorTypeInvoker;
 import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.platform.cursor.CursorType;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWImage;
+import org.lwjgl.sdl.SDLMouse;
+import org.lwjgl.sdl.SDLPixels;
+import org.lwjgl.sdl.SDLSurface;
+import org.lwjgl.sdl.SDL_Surface;
 import org.lwjgl.system.MemoryUtil;
 
 import java.lang.reflect.Constructor;
@@ -20,11 +21,11 @@ import java.nio.ByteBuffer;
  * <p>按住 <b>Alt</b>（收藏）指针变成金色星星，松手立刻变回箭头。图标只在指针确实
  * 停在<b>能生效的槽位</b>上时才换 —— 界面空白处、铁砧的输入框上都不换。</p>
  *
- * <p><b>为什么不自己调 GLFW？</b>因为原版留了一条更好的路：
+ * <p><b>为什么不自己调 SDL？</b>因为原版留了一条更好的路：
  * {@code Gui} 每帧末尾会调 {@code GuiGraphicsExtractor.applyCursor(window)}，
  * 把当帧攒下来的 {@code pendingCursor} 交给 {@code Window.selectCursor}。
  * 而 {@code selectCursor} 是按<b>引用</b>去重的（{@code currentCursor != target} 才真的
- * 调 {@code glfwSetCursor}）。于是只要往 {@code pendingCursor} 里塞一个自定义
+ * 调 {@code SDL_SetCursor}）。于是只要往 {@code pendingCursor} 里塞一个自定义
  * {@link CursorType}，就同时得到两个好处：</p>
  * <ul>
  *   <li>恢复箭头不用我管 —— 渲染器每帧都是新建的、{@code pendingCursor} 每帧从
@@ -33,18 +34,19 @@ import java.nio.ByteBuffer;
  *       {@code requestCursor} 提的，我停止覆盖之后它们照常生效。</li>
  * </ul>
  *
- * <p><b>为什么要自己造 CursorType？</b>因为 26.2 的 {@code CursorType} 只暴露了
+ * <p><b>为什么要自己造 CursorType？</b>因为 26.3 的 {@code CursorType} 仍然只暴露了
  * {@code createStandardCursor}（系统标准光标），没有「用图片当光标」的接口，
- * 私有的 {@code (String, long)} 构造器外面够不着。所以就自己用
- * {@code GLFW.glfwCreateCursor} 造 GLFW 光标，再用 {@link CursorTypeInvoker}
- * 借一下那个私有构造器，把它包成 {@code CursorType}。</p>
+ * 私有的 {@code (String, long)} 构造器外面够不着。26.3 的窗口后端从 GLFW 换成了
+ * SDL，那个 {@code long} 现在是一个 {@code SDL_Cursor} 句柄 —— 所以用
+ * {@code SDL_CreateColorCursor} 从位图造一个 SDL 光标，再用 {@link CursorTypeInvoker}
+ * 借一下私有构造器，把它包成 {@code CursorType}。</p>
  */
 public final class CursorIcons {
 
 	/**
-	 * 位图物理边长（GLFW 拿到的实际尺寸）。
+	 * 位图物理边长（交给 SDL 的实际尺寸）。
 	 *
-	 * <p>GLFW 会把整张图原样交给系统，不跟着游戏的 GUI 缩放变。Windows 上光标位图
+	 * <p>光标位图是一张固定像素尺寸的图，不跟着游戏的 GUI 缩放变。Windows 上光标位图
 	 * 常见尺寸就是 32，取 32 既不糊也不会比原版箭头大太多。</p>
 	 */
 	private static final int SIZE = 32;
@@ -135,13 +137,10 @@ public final class CursorIcons {
 		if (mc == null) {
 			return null;
 		}
-		Window window = mc.getWindow();
-		if (window == null) {
-			return null;
-		}
 
+		// 26.3 的 isKeyDown(int) 直接读 SDL 键盘状态，常量是 SDL scancode。
 		if (overFavoriteTarget && ModConfig.favoriteEnabled
-				&& isDown(window, GLFW.GLFW_KEY_LEFT_ALT, GLFW.GLFW_KEY_RIGHT_ALT)) {
+				&& isDown(InputConstants.KEY_LALT, InputConstants.KEY_RALT)) {
 			return star(mc);
 		}
 		return null;
@@ -158,8 +157,8 @@ public final class CursorIcons {
 		overFavoriteTarget = false;
 	}
 
-	private static boolean isDown(Window window, int left, int right) {
-		return InputConstants.isKeyDown(window, left) || InputConstants.isKeyDown(window, right);
+	private static boolean isDown(int left, int right) {
+		return InputConstants.isKeyDown(left) || InputConstants.isKeyDown(right);
 	}
 
 	private static CursorType star(Minecraft mc) {
@@ -169,31 +168,37 @@ public final class CursorIcons {
 		return starCursor;
 	}
 
-	/** 画位图 → 造 GLFW 光标 → 包成 CursorType。三样都不成的话返回 null 并永久停用。 */
+	/** 画位图 → 造 SDL 彩色光标 → 包成 CursorType。任何一步不成的话返回 null 并永久停用。 */
 	private static CursorType build(Minecraft mc) {
 		ByteBuffer pixels = MemoryUtil.memAlloc(SIZE * SIZE * 4);
-		GLFWImage.Buffer image = null;
+		SDL_Surface surface = null;
 		try {
 			paint(pixels);
 			pixels.flip();
 
-			image = GLFWImage.malloc(1);
-			image.width(SIZE);
-			image.height(SIZE);
-			image.pixels(pixels);
+			// SDL 的 ABGR8888 在小端机器上的内存序就是 R,G,B,A，正好对上 paint() 的写法。
+			// 这个 surface 不拷贝像素数据，所以 pixels 必须活到 CreateColorCursor 返回。
+			surface = SDLSurface.SDL_CreateSurfaceFrom(
+					SIZE, SIZE, SDLPixels.SDL_PIXELFORMAT_ABGR8888, pixels, SIZE * 4);
+			if (surface == null) {
+				unavailable = true;
+				InventoryButler.LOGGER.warn("[{}] 创建光标位图失败（SDL 返回空），指针图标功能关闭",
+						InventoryButler.MOD_ID);
+				return null;
+			}
 
-			// GLFW 会把图像数据拷走，所以这个临时缓冲区可以随即释放。
-			long handle = GLFW.glfwCreateCursor(image.get(0), HOTSPOT, HOTSPOT);
+			// SDL 会把 surface 拷成光标，之后 surface 与缓冲区都可以释放。
+			long handle = SDLMouse.SDL_CreateColorCursor(surface, HOTSPOT, HOTSPOT);
 			if (handle == 0L) {
 				unavailable = true;
-				InventoryButler.LOGGER.warn("[{}] 创建自定义光标失败（GLFW 返回 0），指针图标功能关闭",
+				InventoryButler.LOGGER.warn("[{}] 创建自定义光标失败（SDL 返回 0），指针图标功能关闭",
 						InventoryButler.MOD_ID);
 				return null;
 			}
 
 			CursorType type = wrap("inventorybutler_star", handle);
 			if (type == null) {
-				GLFW.glfwDestroyCursor(handle);
+				SDLMouse.SDL_DestroyCursor(handle);
 				unavailable = true;
 			}
 			return type;
@@ -203,15 +208,15 @@ public final class CursorIcons {
 					InventoryButler.MOD_ID, t.toString());
 			return null;
 		} finally {
-			if (image != null) {
-				image.free();
+			if (surface != null) {
+				SDLSurface.SDL_DestroySurface(surface);
 			}
 			MemoryUtil.memFree(pixels);
 		}
 	}
 
 	/**
-	 * 把 GLFW 光标句柄包成原版的 {@link CursorType}。
+	 * 把 SDL 光标句柄包成原版的 {@link CursorType}。
 	 *
 	 * <p>首选 {@link CursorTypeInvoker}（mixin 借私有构造器）—— 它是编译期就会校验的，
 	 * 目标一改这里直接编译不过，比运行时才发现要早。万一 mixin 因为别的原因没应用上

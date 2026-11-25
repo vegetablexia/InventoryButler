@@ -12,6 +12,7 @@ import com.inventorybutler.client.ScreenMessage;
 import com.inventorybutler.network.FavoriteTogglePayload;
 import com.inventorybutler.network.PinPayload;
 import com.inventorybutler.network.SortPayload;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -153,8 +154,10 @@ public abstract class AbstractContainerScreenMixin {
 		// 创造模式的菜单是客户端专用的物品选择器，槽位下标和服务端的 InventoryMenu
 		// 对不上；只有真正的玩家背包格能收藏（物品选择页是底部快捷栏，「物品栏」页
 		// 是整块背包），都要先换算成服务端 InventoryMenu 下标再发。
-		if (ModConfig.favoriteEnabled && event.button() == 0 && event.hasAltDown()
-				&& !slot.getItem().isEmpty()) {
+		// 26.3 的鼠标按钮编号跟着 SDL 走：左=1、中=2、右=3（GLFW 时代是 0/1/2）。
+		// 不能再用 0 / 1 这种字面量，否则 Alt+左键会被当成右键分支。
+		if (ModConfig.favoriteEnabled && event.button() == InputConstants.MOUSE_BUTTON_LEFT
+				&& event.hasAltDown() && !slot.getItem().isEmpty()) {
 			int slotId = serverSlotId(slot);
 			if (slotId < 0) {
 				return;
@@ -173,7 +176,8 @@ public abstract class AbstractContainerScreenMixin {
 		// 只认玩家背包 0-35 —— 箱子的格子、护甲格没有「归位」可言。
 		// 空格子只有在已经有标记时才有效（取消标记）；否则放行给原版，
 		// 别吞掉 Alt+右键原本的半叠拿起 / 放一个。
-		if (ModConfig.pinEnabled && event.button() == 1 && event.hasAltDown()) {
+		if (ModConfig.pinEnabled && event.button() == InputConstants.MOUSE_BUTTON_RIGHT
+				&& event.hasAltDown()) {
 			int home = inventoryHome(slot);
 			if (home < 0) {
 				return;
@@ -214,7 +218,7 @@ public abstract class AbstractContainerScreenMixin {
 
 		// 先拦「界面打开时按丢弃键」。
 		//
-		// 界面打开时的 Q 走的是完全另一条路，跟 LocalPlayer.drop 没关系：
+		// 界面打开时的 Q 走的是完全另一条路，跟 MultiPlayerGameMode.dropItem 没关系：
 		//   keyPressed -> options.keyDrop.matches -> slotClicked(slot, index, ctrl?1:0, THROW)
 		// 服务端的 AbstractContainerMenuMixin 会在菜单入口把它拦下，
 		// 但那属于「事后补救」；在客户端先挡一道，玩家才能立刻看到提示。

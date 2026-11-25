@@ -3,9 +3,10 @@
 给 Minecraft 的物品栏加一套泰拉瑞亚风格的**管理工具**：**一键整理**、
 **收藏锁定**、**归位标记**，外加会跟着操作变形的**像素鼠标指针**。
 
-- 游戏版本：Minecraft **26.2**（Fabric）
+- 游戏版本：Minecraft **26.3**（Fabric）
+- 发布：v1.1.0 的 Release 同时提供 **Minecraft 26.2** 与 **26.3** 两个 jar
 - 运行环境：**客户端 + 服务端都要安装**
-- 依赖：Java ≥ 25、Fabric Loader ≥ 0.19.3、Fabric API ≥ 0.155.0
+- 依赖：Java ≥ 25、Fabric Loader ≥ 0.20.0、Fabric API ≥ 0.167.0
 - 协议：MIT
 
 > **名字的由来**：这几个功能合起来就是一位管家做的事 —— 帮你收拾房间（整理）、
@@ -31,8 +32,8 @@
 
 ## 安装
 
-1. 安装 **Fabric Loader ≥ 0.19.3** 与 **Fabric API ≥ 0.155.0**；
-2. 把 `inventorybutler-1.0.14.jar` 放进 `mods/` 文件夹；
+1. 安装 **Fabric Loader ≥ 0.20.0** 与 **Fabric API ≥ 0.167.0**；
+2. 把 `inventorybutler-1.1.0-mc26.3.jar` 放进 `mods/` 文件夹（Minecraft 26.2 用 `inventorybutler-1.1.0-mc26.2.jar`）；
 3. **服务端也要放同一个 jar**，联机时两端都要装（原因见「多人游戏」一节）。
 
 单人游戏内置的服务端会自动加载本 mod，开箱即用。
@@ -312,7 +313,7 @@ Shift 快移会再把它送回来。
 正常不用手动设 `JAVA_HOME`：
 
 ```bash
-./gradlew build        # 产物在 build/libs/inventorybutler-1.0.14.jar
+./gradlew build        # 产物在 build/libs/inventorybutler-1.1.0.jar
 ./gradlew runClient    # 开发环境启动客户端
 ./gradlew runServer    # 开发环境启动服务端
 ```
@@ -324,6 +325,10 @@ Mixin 0.8.x 有一个编译器抓不到的坑：`@Shadow` 的**字段**只会在
 `tools/verify_mixins.py` 会对着 Minecraft jar 逐条核对：
 
 ```bash
+# 默认自动找 .tools/mc/ 或 ~/.gradle/caches/fabric-loom/<版本>/ 里的 jar
+python tools/verify_mixins.py --javap "C:/Program Files/Java/<jdk>/bin/javap.exe"
+
+# 也可以显式指定 jar
 python tools/verify_mixins.py --jar <path/to/client.jar> \
        --javap "C:/Program Files/Java/<jdk>/bin/javap.exe"
 ```

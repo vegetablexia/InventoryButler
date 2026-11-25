@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * 服务端侧的「收藏物品丢不掉」。
  *
- * <p>和客户端的 {@code LocalPlayerDropMixin} 对称：这里拦的是
+ * <p>和客户端的 {@code MultiPlayerGameModeDropMixin} 对称：这里拦的是
  * {@link ServerPlayer#drop(boolean)}，也就是服务器处理
  * {@code ServerboundPlayerActionPacket(DROP_ITEM / DROP_ALL_ITEMS)} 的入口。
  * 客户端已经拦过一道，这里再拦一道是为了防止「没装本模组的客户端」或者

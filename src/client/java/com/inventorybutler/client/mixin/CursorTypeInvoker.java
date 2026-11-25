@@ -7,9 +7,9 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 /**
  * 借 {@link CursorType} 的私有构造器。
  *
- * <p>26.2 的 {@code CursorType} 只对外开放了 {@code createStandardCursor}
+ * <p>26.3 的 {@code CursorType} 只对外开放了 {@code createStandardCursor}
  * （造箭头 / I 型光标 / 手型这类系统标准光标），没有「用一张图片当光标」的入口，
- * 而 {@code CursorType(String, long)} 是私有的 —— 那第二个参数就是 GLFW 光标句柄。
+ * 而 {@code CursorType(String, long)} 是私有的 —— 那第二个参数就是 SDL 光标句柄。
  * 想用自定义图片光标，就只能从这里借一下。</p>
  *
  * <p>构造器型 {@code @Invoker} 的规矩：方法名写 {@code <init>}，必须是

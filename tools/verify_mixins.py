@@ -19,7 +19,7 @@ Mixin 静态自检 —— 在启动游戏之前，把「编译能过、一启动
 而 Mixin 的注解处理器（编译期）是沿继承链找的，所以编译期发现不了。
 
 用法：
-    python tools/verify_mixins.py                 # 自动找 .tools/mc/client-26.2.jar
+    python tools/verify_mixins.py                 # 自动找 .tools/mc/ 或 Gradle Loom 缓存里的 MC jar
     python tools/verify_mixins.py --jar <mc.jar>
     python tools/verify_mixins.py --strict        # 把 WARN 也当失败
 
@@ -49,27 +49,52 @@ MIXIN_JSON_GLOBS = [
     "src/main/resources/*.mixins.json",
     "src/client/resources/*.mixins.json",
 ]
-DEFAULT_JARS = [
-    ".tools/mc/client-26.2.jar",
-    ".tools/mc/server-26.2.jar",
-]
+def mc_version():
+    """从 gradle.properties 读 minecraft_version；读不到就按 26.3 猜。"""
+    try:
+        for line in open("gradle.properties", encoding="utf-8"):
+            key, sep, value = line.strip().partition("=")
+            if sep and key == "minecraft_version" and value.strip():
+                return value.strip()
+    except OSError:
+        pass
+    return "26.3"
 
 
 def find_default_jars():
-    """.tools/mc 可能在本目录，也可能在工程上一级（工作区根目录），逐级往上找。"""
+    """按顺序找 MC jar：工程内 .tools/mc（可能在上层目录）> Gradle Loom 缓存。
+
+    Loom 缓存里 client 是合并后的 minecraft-client.jar，服务端要用
+    minecraft-extracted_server.jar（minecraft-server.jar 是混淆的 bundler 外壳，
+    里面的类名不是 net.minecraft.*，javap 查不到）。
+    """
+    ver = mc_version()
+    patterns = [
+        f".tools/mc/client-{ver}.jar",
+        f".tools/mc/server-{ver}.jar",
+        os.path.join(os.path.expanduser("~"), ".gradle", "caches", "fabric-loom",
+                     ver, "minecraft-client.jar"),
+        os.path.join(os.path.expanduser("~"), ".gradle", "caches", "fabric-loom",
+                     ver, "minecraft-extracted_server.jar"),
+    ]
     out, seen = [], set()
-    for pat in DEFAULT_JARS:
-        base = os.path.abspath(os.path.dirname(__file__))
-        for _ in range(5):
-            cand = os.path.abspath(os.path.join(base, pat))
+    for pat in patterns:
+        if os.path.isabs(pat):
+            candidates = [pat]
+        else:
+            candidates = []
+            base = os.path.abspath(os.path.dirname(__file__))
+            for _ in range(5):
+                candidates.append(os.path.abspath(os.path.join(base, pat)))
+                nb = os.path.dirname(base)
+                if nb == base:
+                    break
+                base = nb
+        for cand in candidates:
             if os.path.isfile(cand) and cand not in seen:
                 seen.add(cand)
                 out.append(cand)
                 break
-            nb = os.path.dirname(base)
-            if nb == base:
-                break
-            base = nb
     return out
 
 # javap 打出来的类声明行，用来拿父类：
@@ -420,7 +445,8 @@ def main():
 
     jars = args.jar or find_default_jars()
     if not jars:
-        print("找不到 MC jar，请用 --jar 指定（默认从本目录向上找 .tools/mc/client-26.2.jar）")
+        print("找不到 MC jar，请用 --jar 指定"
+              f"（默认找 .tools/mc/client-{mc_version()}.jar 和 Gradle Loom 缓存）")
         return 1
     classpath = os.pathsep.join(os.path.abspath(j) for j in jars)
 

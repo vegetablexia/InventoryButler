@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * 「物品刚进背包」的归位钩子。
  *
  * <p>{@code Inventory.add(ItemStack)} 是原版所有「塞东西进背包」的公共漏斗，
- * 26.2 里确认过两条主要路径都会经过它：</p>
+ * 26.3 里确认过两条主要路径都会经过它：</p>
  *
  * <pre>
  * 捡起地上的掉落物: ItemEntity.playerTouch -> Inventory.add(ItemStack)
